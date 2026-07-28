@@ -38,6 +38,8 @@ var _pause_menu: CanvasLayer  = null
 @onready var _hud_rounds: Label          = $HUD/HUDRoot/RoundsLabel
 @onready var _hud_combo: Label           = $HUD/HUDRoot/ComboLabel
 @onready var _hud_special: ProgressBar   = $HUD/HUDRoot/SpecialGaugeBar
+@onready var _hud_enemies_left: Label    = $HUD/HUDRoot/EnemiesRemainingLabel
+@onready var _hud_wave: Label            = $HUD/HUDRoot/WaveLabel
 
 const COMBO_RESET_SECS := 1.8
 var _combo_count: int        = 0
@@ -91,6 +93,10 @@ func _ready() -> void:
 # ── Classic 1v1 ───────────────────────────────────────────────────────────────
 
 func _spawn_classic_mode() -> void:
+	if _hud_enemy_hp: _hud_enemy_hp.visible = true
+	if _hud_enemies_left: _hud_enemies_left.visible = false
+	if _hud_wave: _hud_wave.visible = false
+
 	_player = FighterPool.pull(PLAYER_SCENE.resource_path, _player_spawn.global_transform)
 	if _player == null:
 		return
@@ -129,6 +135,10 @@ func _configure_gang_spawner() -> void:
 	GangSpawner.configure(self, all_points, [1, int(waves[0].get("count", 1))], waves)
 
 func _spawn_warriors_mode() -> void:
+	if _hud_enemy_hp: _hud_enemy_hp.visible = false
+	if _hud_enemies_left: _hud_enemies_left.visible = true
+	if _hud_wave: _hud_wave.visible = true
+
 	_player = GangSpawner.spawn_player(_player_spawn)
 	if _player == null:
 		return
@@ -170,6 +180,15 @@ func _process(delta: float) -> void:
 		_combo_timer -= delta
 		if _combo_timer <= 0.0:
 			_break_combo()
+
+	# Enemies-remaining / wave counters — polled rather than event-driven since
+	# GangSpawner only signals wave_cleared/all_waves_cleared, not per-kill;
+	# a cheap once-a-frame label update isn't worth adding new plumbing for.
+	if warriors_mode and match_state == MatchState.FIGHTING:
+		if _hud_enemies_left:
+			_hud_enemies_left.text = "ENEMIES: %d" % GangSpawner.active_enemy_count()
+		if _hud_wave:
+			_hud_wave.text = "WAVE %d / %d" % [GangSpawner.current_wave_number(), GangSpawner.total_wave_count()]
 
 func _start_fight() -> void:
 	if match_state == MatchState.FIGHTING:

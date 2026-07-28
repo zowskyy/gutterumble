@@ -135,6 +135,15 @@ func _on_enemy_died(inst: Node3D) -> void:
 func active_enemy_count() -> int:
 	return _active_enemies.size()
 
+func current_wave_number() -> int:
+	# Clamped: _wave_index reaches _waves.size() right after the last wave
+	# clears (before all_waves_cleared's listeners react), which would
+	# otherwise display as e.g. "Wave 4 / 3" for one frame.
+	return mini(_wave_index + 1, _waves.size())   # 1-based for display
+
+func total_wave_count() -> int:
+	return _waves.size()
+
 func return_all() -> void:
 	for inst in _active_enemies.duplicate():
 		FighterPool.push(ENEMY_SCENE, inst)
