@@ -1,0 +1,28 @@
+{
+  "arenas": {
+    "back_alley": {
+      "status": "done",
+      "textures": 4
+    },
+    "subway_platform": {
+      "status": "pending",
+      "textures": 4
+    },
+    "rooftop": {
+      "status": "pending",
+      "textures": 4
+    },
+    "warehouse": {
+      "status": "pending",
+      "textures": 4
+    },
+    "parking_garage": {
+      "status": "pending",
+      "textures": 4
+    },
+    "burning_lot": {
+      "status": "pending",
+      "textures": 4
+    }
+  }
+}

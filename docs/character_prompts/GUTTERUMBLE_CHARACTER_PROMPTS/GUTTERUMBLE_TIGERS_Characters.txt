@@ -1,0 +1,35 @@
+GUTTERUMBLE CHARACTER PROMPTS
+TIGERS GANG - Aggressive Bold Striped Warriors
+==============================================
+
+TIGERS_GRUNT_01 - "Stripe"
+A powerfully built Chinese-American male, mid-20s, with aggressive posture and sharp intense eyes. Short black hair with orange highlights. Wearing a black leather jacket with orange tiger-stripe pattern down arms, orange tank top with black stripes across chest, black denim, orange and black motorcycle boots. Tiger tattoo on left shoulder visible. Aggressive forward-leaning stance, fists clenched. GUTTERUMBLE game art. Cel-shaded stylized. Gritty 70s primal warrior energy. Bold orange accent glow. Raw intimidating power.
+
+TIGERS_GRUNT_02 - "Roar"
+A muscular Black male, early 30s, with thick powerful frame and shaved head with orange beard. Dark skin gleaming with intensity. Wearing a sleeveless orange muscle shirt with black tiger stripes painted across, black leather vest, black pants, orange and black heavy boots. Gold tiger-head chain around neck. Standing in aggressive ready stance. Growling expression. GUTTERUMBLE cell-shaded street fighter. High contrast dramatic lighting. Orange neon glow. Raw primal street aggression. 1970s exploitation film aesthetic.
+
+TIGERS_GRUNT_03 - "Claw"
+A wiry Latino male, late 20s, with scar across left cheek and wild intensity in dark eyes. Messy black hair with orange streaks. Wearing a ripped orange t-shirt (sleeves torn off), black leather jacket draped, tight black jeans with orange belt, worn orange and black sneakers. Brass knuckles visible. Knife scar on right forearm. Standing in coiled aggressive posture. GUTTERUMBLE game character. Cel-shaded. Gritty battle-scarred street fighter. Orange neon side-lighting. Street warrior vibes.
+
+TIGERS_GRUNT_04 - "Pounce"
+A compact muscular Samoan-American male, mid-20s, with short dark hair and intimidating broad face. Dark brown skin. Wearing an orange Hawaiian shirt (vintage, over-sized), black tank top visible, black cargos, orange and black sandals (showing tribal tattoo on foot). Explosive potential in every muscle. Standing low and ready, like springing attack. GUTTERUMBLE aesthetic. Cel-shaded stylized. Primal aggressive energy. Dark moody with orange neon. 70s gang culture meets Polynesian warrior pride.
+
+TIGERS_LEADER - "Tiger King"
+A commanding Native American male, late 30s, tall and heavily muscled with weathered powerful face. Long black hair (past shoulders, with orange beaded braids), prominent cheekbones, intense dark eyes. Wearing a custom orange leather jacket (hand-tooled patterns), black silk shirt with tiger embroidery (gold), black tailored pants, orange shoes with turquoise buckles. Multiple heavy gold chains. Tiger tooth necklace (faux). Standing with absolute primal authority. GUTTERUMBLE game character. Cel-shaded. Warrior chieftain energy meets 1970s street royalty. Dramatic orange neon theatrical lighting.
+
+TIGERS_LOOKOUT - "Scout"
+A lean athletic Puerto Rican male, early 20s, with alert sharp features and quick active eyes. Black hair in short fade with orange parts. Wearing a orange and black windbreaker, black t-shirt, black jeans, orange and black sneakers. Standing on high ground, scanning territory with intense focus. Hand shielding eyes. Ready energetic tension. GUTTERUMBLE cell-shaded street art. Orange neon accent. Gritty urban watchman. 70s street aesthetic with dynamic alert posture. Elevated observation pose.
+
+TIGERS_SPEEDSTER - "Bolt"
+A small-framed Korean-American male, teenager (17-18), lean quick with youthful aggressive face. Short black hair spiked with orange tips. Wearing a sleeveless orange racing jacket, black undershirt, orange track pants with black stripe, orange sneakers with high black socks. Poised in explosive ready-to-sprint position. Coiled spring energy. Young hungry tiger cub. GUTTERUMBLE game aesthetic. Stylized cel-shaded. Dynamic speed lines. Orange neon velocity effects. Youthful raw energy.
+
+TIGERS_TANK - "Crusher Beast"
+A massive Caucasian male, mid-40s, with enormous bulging frame and pale intimidating weathered face. Thick orange and black beard, bald head with scar pattern. Scarred neck and arms (old battle marks). Wearing a sleeveless orange tank top (stretched to capacity over massive chest), heavy black leather harness, black cargo pants held up by thick chain, steel-toed orange and black boots. Standing absolutely immobile and imposing. Pure wall of muscle. GUTTERUMBLE cel-shaded. High contrast shadows emphasizing scars. Brutal powerful weathered look. Orange neon spot lighting. Terrifying tank energy.
+
+==============================================
+TIGERS GANG VISUAL SUMMARY:
+Primary Color: Bright Orange (#FF8833) with black accents
+Aesthetic: Aggressive primal warriors, bold and loud, stripe-obsessed, diverse ethnicity
+Body Types: Powerfully muscular (varies from lean-mean to massive tank)
+Signature Look: Orange stripes, leather, tiger symbolism, warrior intensity, heavy jewelry
+==============================================

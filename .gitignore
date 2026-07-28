@@ -1,0 +1,11 @@
+# Godot 4 — standard ignores
+.godot/
+*.uid
+*.import
+android/
+export/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

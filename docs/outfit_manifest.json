@@ -1,0 +1,10 @@
+{
+  "categories": {
+    "headwear": 5,
+    "torso": 5,
+    "hands": 4,
+    "legs": 4,
+    "footwear": 5,
+    "accessories": 5
+  }
+}

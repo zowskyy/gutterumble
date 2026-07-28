@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://col41733iwv4p"]
+
+[ext_resource type="PackedScene" uid="uid://dqogyum2gejlr" path="res://assets/characters/mouse/mouse.glb" id="1_8f81w"]
+
+[node name="mouse" unique_id=1961793736 instance=ExtResource("1_8f81w")]

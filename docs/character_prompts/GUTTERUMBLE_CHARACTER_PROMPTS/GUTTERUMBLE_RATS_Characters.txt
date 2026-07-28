@@ -1,0 +1,35 @@
+GUTTERUMBLE CHARACTER PROMPTS
+RATS GANG - Urban Scrappy Street Fighters
+==============================================
+
+RATS_GRUNT_01 - "Brick"
+A stocky Puerto Rican male, mid-20s, with a thick neck and barrel chest. Shaved head, thin mustache and goatee. Wearing a red/orange sleeveless shirt with black racing stripes down the sides, loose brown cargo pants, heavy black boots with red laces. Thick gold chain necklace and a faded red bandana in back pocket. Aggressive forward stance, knuckles forward. Gritty 1970s street gang aesthetic, stylized cel-shaded rendering, confident menacing expression. Dark moody lighting with neon red accent glow on his stripes.
+
+RATS_GRUNT_02 - "Mouse"
+A lanky Asian-American male, early 20s, with long straight black hair swept to one side. Sharp jawline, smirking expression. Wearing a red leather vest over a white tank top, tight black jeans, white sneakers with red trim. Small scar on left cheekbone. Standing in a relaxed but ready posture, hands near hips. GUTTERUMBLE game art. Cel-shaded. Vibrant but gritty 70s NYC street fighter. Neon red background, concrete wall texture.
+
+RATS_GRUNT_03 - "Crusher"
+A muscular Black male, late 20s, with short cropped fade and thick beard. Intimidating presence. Wearing a red hoodie with "RATS" across chest in hand-drawn lettering, oversized denim jacket draped over shoulders, black sweatpants, red and black high-tops. Brass knuckles visible on right hand. Slight lean forward, alpha stance. Dark skin, high contrast shadows. Stylized cel-shaded. 1970s exploitation film meets modern graffiti art. Neon red glow lighting.
+
+RATS_GRUNT_04 - "Spike"
+A wiry mixed-race male (Afro-Latina), mid-20s, with a tall mohawk (red and black striped). Dark skin, prominent cheekbones. Wearing a red studded leather jacket, black fishnet shirt underneath, tight red jeans with black boots. Spiked wristbands on both arms. Angry snarl, dynamic fighting stance. GUTTERUMBLE aesthetic. Cel-shaded street art style. Gritty urban alloy and neon. Dynamic energy.
+
+RATS_LEADER - "Caprice"
+A commanding African-American male, late 30s, tall and lean but powerful. Well-groomed short hair with a subtle fade, well-trimmed beard. Intense gaze. Wearing a custom red leather jacket with RATS emblem stitched in gold on back, gold chains layered on chest, black silk shirt open at collar, tailored black pants, polished red shoes with gold buckle. Standing with absolute authority, one hand on hip. GUTTERUMBLE game character. Cel-shaded stylized. 1970s Harlem street royalty meets modern gang aesthetic. Dramatic neon red side-lighting. Scarred knuckles visible.
+
+RATS_LOOKOUT - "Echo"
+A thin, alert Italian-American male, early 20s, with sharp features and quick eyes. Messy dark brown hair. Wearing a red and black flannel shirt (sleeves rolled up), white tank underneath, slim black jeans, beat-up red canvas sneakers. Holding a vintage walkie-talkie. Standing on one leg, leaning against imaginary wall, scanning horizon. Ready energy. GUTTERUMBLE cell-shaded street art. Neon city backdrop. Gritty 70s vibes with modern graffiti sensibility. Small scar over eye.
+
+RATS_SPEEDSTER - "Dash"
+A small-framed Latino male, teenager (18-19), lean and quick-looking. Tousled black hair, youthful energy. Wearing a sleeveless red hoodie, tight black undershirt, black track pants with red stripe down leg, red sneakers with white socks. Poised mid-sprint, knees bent, arms ready. Playful intensity. GUTTERUMBLE game aesthetic. Stylized cel-shaded. Dynamic energy lines around his silhouette. Neon red streaks following his position. Street urchin meets urban athlete.
+
+RATS_TANK - "Brutus"
+A massive Eastern European-American male, early 40s, with bulging shoulders and thick forearms. Pale skin, buzz cut gray-streaked blonde hair, thick military-style beard. Scarred face (left side), one eye slightly squinted. Wearing a torn red tank top barely containing his frame, brown leather harness across chest, heavy black utility pants, steel-toed work boots. Standing immobile, imposing, like a wall. GUTTERUMBLE cel-shaded. High contrast shadows. Gritty weathered look. Neon red spot lighting on his scars.
+
+==============================================
+RATS GANG VISUAL SUMMARY:
+Primary Color: Fire Red (#FF3333) with black accents
+Aesthetic: Scrappy urban fighters, diverse ages/builds, street-level energy
+Body Types: Varies widely (stocky, lean, muscular, wiry)
+Signature Look: Red leather, racing stripes, bandanas, chains, street wear
+==============================================

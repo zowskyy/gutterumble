@@ -1,0 +1,20 @@
+
+CHARACTER CONCEPT:
+"GUTTERUMBLE game character. Street gang member. 1970s gritty aesthetic. Cel-shaded stylized look. 
+Detailed clothing: leather jacket, jeans, boots. Confident stance. Dark moody lighting with neon accents."
+
+WEAPON CONCEPT:
+"Baseball bat for GUTTERUMBLE game. Wooden with metal studs. Gritty 70s street weapon. 
+Cel-shaded stylized. Dark weathered wood texture. Ready for 3D game model."
+
+ARENA CONCEPT:
+"Back alley street scene for GUTTERUMBLE game. Urban 1970s New York. Graffiti walls, flickering neon signs, 
+rain-slicked concrete. Gritty street gang brawl arena. Cel-shaded stylized art. Dark moody atmosphere."
+
+TEXTURE CONCEPT:
+"Seamless tiling texture: weathered brick wall, gritty 1970s NYC street aesthetic. 
+Cel-shaded stylized. PBR-compatible albedo map. 1024x1024. Dark moody tone with moss and grime."
+
+GANG EMBLEM:
+"GUTTERUMBLE gang logo. Bold silhouette design. Single color on transparent background. 
+Street gang style. Edgy, aggressive, memorable. Suitable for team banner and character vest decal."

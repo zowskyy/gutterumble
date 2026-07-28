@@ -1,0 +1,24 @@
+{
+  "weapons": {
+    "bat": {
+      "damage": 15,
+      "speed": 0.8
+    },
+    "chain": {
+      "damage": 12,
+      "speed": 1.2
+    },
+    "knife": {
+      "damage": 20,
+      "speed": 1.5
+    },
+    "pipe": {
+      "damage": 18,
+      "speed": 0.9
+    },
+    "brass_knuckles": {
+      "damage": 10,
+      "speed": 2.0
+    }
+  }
+}

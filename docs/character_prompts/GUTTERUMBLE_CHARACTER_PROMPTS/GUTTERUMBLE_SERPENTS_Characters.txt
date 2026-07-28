@@ -1,0 +1,35 @@
+GUTTERUMBLE CHARACTER PROMPTS
+SERPENTS GANG - Sleek Dangerous Predators
+==============================================
+
+SERPENTS_GRUNT_01 - "Venom"
+A lean Indian-American male, mid-20s, with sharp angular features and dark penetrating eyes. Long black hair slicked back with gel. Wearing a emerald green leather jacket with serpent scale pattern texture, black muscle shirt, tight black jeans, pointed-toe black shoes. Snake tattoo coiling around right arm (visible). Smirking dangerous expression. Poised ready-to-strike stance. GUTTERUMBLE game art. Cel-shaded stylized. Gritty 70s gang aesthetic with modern sleek edge. Neon green accent glow on jacket scales. Predatory energy.
+
+SERPENTS_GRUNT_02 - "Fang"
+A medium-build East Asian male, early 20s, with slicked straight black hair and cold calculating expression. Clean-shaven. Wearing a emerald green silk shirt (unbuttoned 3 buttons), black undershirt, black trousers, green and black sneakers. Standing in ready fighting posture, one hand adjusting collar. Collected dangerous vibe. GUTTERUMBLE cell-shaded street art. Dark moody lighting with green neon accents. Serpent gang signature look: emerald green + jet black + calculated menace.
+
+SERPENTS_GRUNT_03 - "Coil"
+A muscular Black male, late 20s, with short hair and sculpted face. Dark gleaming skin. Wearing a sleeveless emerald green vest over a black mesh shirt (showing defined chest), black baggy pants, green and black Adidas sneakers. Gold serpent chain on waist. Dangerous calm expression. Leaning back in controlled power stance. GUTTERUMBLE game character. Cel-shaded. Gritty urban predator. High contrast dramatic lighting, green neon rim light. Sculptural muscles defined by shadow.
+
+SERPENTS_GRUNT_04 - "Scale"
+A lithe Latina female, mid-20s, with dark brown skin and sharp features. Long black hair in a high ponytail, dramatic green eyeshadow. Wearing a cropped emerald green jacket, black sports bra visible, black leather pants, knee-high green and black boots. Whip coiled at waist. Menacing yet graceful posture. Ready to strike. GUTTERUMBLE aesthetic. Cel-shaded stylized. Predatory feminine energy. Dark 70s street aesthetic with modern flair. Green neon glow highlighting her form.
+
+SERPENTS_LEADER - "Hiss"
+A charismatic Vietnamese-American male, late 30s, tall and imposing with sharp cheekbones and cold intelligent eyes. Immaculately groomed long black hair (past shoulders), thin mustache and goatee. Wearing a custom emerald green silk shirt with serpent embroidery (gold threading), draped emerald cloak over shoulders, black tailored pants, emerald shoes with gold buckles. Gold serpent rings on every finger. Standing with absolute calculated authority. GUTTERUMBLE game character. Cel-shaded. Calculated menace and style. Dramatic neon green theatrical lighting. 1970s crime boss meets modern gang royalty.
+
+SERPENTS_LOOKOUT - "Slither"
+A thin wiry Middle Eastern male, early 20s, with sharp hawk-like face and alert intelligent eyes. Dark curly hair kept short. Wearing a emerald green windbreaker, black turtleneck, black jeans, green and black running shoes. Holding binoculars. Standing on elevated surface, scanning territory with predatory focus. Tense ready energy. GUTTERUMBLE cell-shaded street art. Neon green accent lighting. Gritty urban watchman. 70s street aesthetic with modern surveillance twist.
+
+SERPENTS_SPEEDSTER - "Dart"
+A slim Filipino-American male, teenager (17-18), lean quick-looking with youthful intense face. Black spiky hair swept back. Wearing a emerald green racing jacket, black tank top, black track pants with green stripe, emerald green sneakers. Poised in mid-sprint, dynamic energy. Lithe and quick. Youthful swagger. GUTTERUMBLE game aesthetic. Stylized cel-shaded. Dynamic speed lines around silhouette. Green neon velocity streaks. Street speed demon meets young gang prospect.
+
+SERPENTS_TANK - "Python"
+A massive Slavic male, early 40s, with thick powerful frame and pale intimidating face. Bald head, thick dark beard. Scarred forehead (ritual-looking). Wearing a ripped emerald green tank top (muscles barely contained), dark leather harness with serpent buckles, heavy black cargo pants, steel-toed boots with green laces. Standing absolutely immobile, like a coiled spring. Terrifying calm. GUTTERUMBLE cel-shaded. High contrast dramatic shadows. Weathered powerful look. Green neon spot lighting on scars and musculature. Gaunt powerful presence.
+
+==============================================
+SERPENTS GANG VISUAL SUMMARY:
+Primary Color: Emerald Green (#00AA44) with black accents
+Aesthetic: Sleek calculated predators, style-focused, dangerous and elegant
+Body Types: Lean, angular, controlled (speedster to tank varies)
+Signature Look: Green silk/leather, scales, organized, jewelry, calculated menace
+==============================================

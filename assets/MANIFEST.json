@@ -1,0 +1,50 @@
+
+{
+  "textures": {
+    "concrete": {
+      "path": "assets/textures/generated/concrete.png",
+      "format": "png",
+      "size": 1024,
+      "usage": "ground, walls"
+    },
+    "metal": {
+      "path": "assets/textures/generated/metal.png",
+      "format": "png",
+      "size": 1024,
+      "usage": "weapons, armor"
+    },
+    "leather": {
+      "path": "assets/textures/generated/leather.png",
+      "format": "png",
+      "size": 1024,
+      "usage": "clothing, vests"
+    }
+  },
+  "models": {
+    "base_body": {
+      "path": "assets/models/base_body.glb",
+      "format": "glb",
+      "joints": ["head", "torso", "hand_l", "hand_r", "feet_l", "feet_r"]
+    },
+    "weapon_bat": {
+      "path": "assets/props/weapons/bat.glb",
+      "format": "glb",
+      "socket": "hand_r"
+    },
+    "weapon_chain": {
+      "path": "assets/props/weapons/chain.glb",
+      "format": "glb",
+      "socket": "hand_r"
+    }
+  },
+  "shaders": {
+    "cel_shaded": {
+      "path": "assets/shaders/cel_shaded.gdshader",
+      "type": "spatial"
+    },
+    "neon": {
+      "path": "assets/shaders/neon.gdshader",
+      "type": "spatial"
+    }
+  }
+}
