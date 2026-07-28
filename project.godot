@@ -33,6 +33,7 @@ CombatFeel="*res://autoloads/combat_feel.gd"
 AudioManager="*res://autoloads/audio_manager.gd"
 RoundManager="*res://autoloads/round_manager.gd"
 SaveManager="*res://autoloads/save_manager.gd"
+VFXPool="*res://autoloads/vfx_pool.gd"
 AnimationTreeBuilder="*res://autoloads/animation_tree_builder.gd"
 
 [display]

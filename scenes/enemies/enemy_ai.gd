@@ -195,12 +195,15 @@ func _on_hitbox_area_entered(area: Area3D) -> void:
 		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
 		(target as CharacterBody3D).velocity += dir * data.knockback
 	var is_heavy: bool = data.damage >= 20.0
+	var contact_point: Vector3 = (area as Node3D).global_position
 	if is_heavy:
 		CombatFeel.hit_heavy()
 		AudioManager.play_sfx("hit_heavy")
+		VFXPool.spark(contact_point, "heavy")
 	else:
 		CombatFeel.hit_light()
 		AudioManager.play_sfx("hit_light")
+		VFXPool.spark(contact_point, "light")
 
 # ── Receive damage ────────────────────────────────────────────────────────────
 func take_damage(amount: float) -> void:
@@ -228,6 +231,7 @@ func _enter_hit_react() -> void:
 func _enter_ko() -> void:
 	CombatFeel.hit_ko()
 	AudioManager.play_sfx("hit_ko")
+	VFXPool.spark(global_position + Vector3.UP, "ko")
 	ai_state     = AIState.KO
 	attack_phase = AttackConfig.AttackPhase.NONE
 	_set_hitbox(false)
