@@ -5,9 +5,10 @@ extends CharacterBody3D
 # even without animations; wire it up after importing mouse.glb)
 #
 # Input actions to define in Project → Settings → Input Map:
-#   attack_light  (default: Z key)
-#   attack_heavy  (default: X key)
-#   dodge         (default: Space)
+#   attack_light    (default: Z key)
+#   attack_heavy    (default: X key)
+#   dodge           (default: Space)
+#   special_attack  (default: C key) — Musou-style AOE, gated by SpecialMeter
 # Falls back to key checks if actions are not defined.
 
 @export var max_health: float  = 100.0
@@ -19,6 +20,8 @@ extends CharacterBody3D
 signal health_changed(new_hp: float, max_hp: float)
 signal died
 signal hit_landed(target: Node3D, attack_id: String, damage: float)
+
+const SPECIAL_LOCKOUT_SECS := 0.4   # brief "cast time" so it isn't a free action
 
 # ── Runtime state ─────────────────────────────────────────────────────────────
 var health: float
@@ -32,6 +35,7 @@ var invulnerable: bool   = false
 var _dodge_dir: Vector3  = Vector3.ZERO
 var _phase_timer: float  = 0.0
 var _phase_dur: float    = 0.0
+var _special_lockout: float = 0.0
 
 # ── Node refs (null-safe) ─────────────────────────────────────────────────────
 @onready var _hitbox: Area3D = get_node_or_null("Hitbox")
@@ -69,7 +73,9 @@ func _setup_trails() -> void:
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
+	_tick_special_lockout(delta)
 	_collect_input()
+	_try_activate_special()
 	_update_fsm(delta)
 	move_and_slide()
 
@@ -85,6 +91,9 @@ func _collect_input() -> void:
 # ── FSM top level ─────────────────────────────────────────────────────────────
 func _update_fsm(delta: float) -> void:
 	var CS := AttackConfig.CombatState
+	if _special_lockout > 0.0:
+		velocity = Vector3.ZERO
+		return
 	match combat_state:
 		CS.KO:
 			_travel(AttackConfig.ANIM_KO)
@@ -123,6 +132,61 @@ func _handle_locomotion(delta: float) -> void:
 	var norm_spd: float = clampf(Vector2(velocity.x, velocity.z).length() / run_speed, 0.0, 1.0)
 	if _anim_tree:
 		_anim_tree.set("parameters/locomotion_tree/blend_space/blend_position", norm_spd)
+
+# ── Special (Musou-style AOE) ─────────────────────────────────────────────────
+# Not routed through the windup/active/recovery phase system — it's an
+# instant global hit, gated purely by SpecialMeter's charge, with a short
+# self-contained lockout instead of the combo FSM's phase machinery.
+
+func _tick_special_lockout(delta: float) -> void:
+	if _special_lockout > 0.0:
+		_special_lockout = maxf(0.0, _special_lockout - delta)
+
+func _try_activate_special() -> void:
+	if combat_state == AttackConfig.CombatState.KO:
+		return
+	if not _action_just_pressed("special_attack", KEY_C):
+		return
+	if not SpecialMeter.try_activate():
+		return
+	_special_lockout = SPECIAL_LOCKOUT_SECS
+	velocity = Vector3.ZERO
+	_do_special_aoe()
+
+func _do_special_aoe() -> void:
+	var data: Dictionary = AttackConfig.ATTACK_DATA["special_aoe"]
+	var space_state := get_world_3d().direct_space_state
+	var shape := SphereShape3D.new()
+	shape.radius = data.range
+
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape               = shape
+	query.transform            = Transform3D(Basis(), global_position)
+	query.collision_mask       = 4   # Hurtboxes layer — matches Hitbox's own mask
+	query.collide_with_areas   = true
+	query.collide_with_bodies  = false
+
+	var hit_ids: Dictionary = {}
+	for result in space_state.intersect_shape(query, 32):
+		var area := result.collider as Area3D
+		if area == null:
+			continue
+		var target := area.get_parent()
+		if target == null or target == self:
+			continue
+		var id := target.get_instance_id()
+		if hit_ids.has(id):
+			continue
+		hit_ids[id] = true
+		if target.has_method("take_damage"):
+			target.take_damage(data.damage)
+		if target is CharacterBody3D:
+			var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
+			(target as CharacterBody3D).velocity += dir * data.knockback
+
+	CombatFeel.hit_ko()
+	AudioManager.play_sfx("special_activate")
+	VFXPool.spark(global_position + Vector3.UP * 0.5, "ko")
 
 # ── Attack initiation ─────────────────────────────────────────────────────────
 func _try_start_attack() -> void:
@@ -252,10 +316,12 @@ func _on_hitbox_area_entered(area: Area3D) -> void:
 		CombatFeel.hit_heavy()
 		AudioManager.play_sfx("hit_heavy")
 		VFXPool.spark(contact_point, "heavy")
+		SpecialMeter.add_charge(SpecialMeter.CHARGE_PER_HEAVY_HIT)
 	else:
 		CombatFeel.hit_light()
 		AudioManager.play_sfx("hit_light")
 		VFXPool.spark(contact_point, "light")
+		SpecialMeter.add_charge(SpecialMeter.CHARGE_PER_LIGHT_HIT)
 	hit_landed.emit(target, current_attack_id, data.damage)
 
 # ── Receive damage ────────────────────────────────────────────────────────────
@@ -264,6 +330,7 @@ func take_damage(amount: float) -> void:
 		return
 	health = maxf(0.0, health - amount)
 	health_changed.emit(health, max_health)
+	SpecialMeter.add_charge(SpecialMeter.CHARGE_PER_DAMAGE_TAKEN)
 	if health <= 0.0:
 		_enter_ko()
 	else:

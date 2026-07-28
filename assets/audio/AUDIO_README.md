@@ -17,6 +17,7 @@ Drop files here. AudioManager will pick them up automatically — no code change
 | `win.ogg` | Player wins a round |
 | `lose.ogg` | Player loses a round |
 | `combo_milestone.ogg` | "Gutter Streak" crosses a tier (6, 10, or 15 hits) — a short rising stinger works well |
+| `special_activate.ogg` | Player unleashes the special AOE at full gauge |
 
 ## music/ — Music loops (.ogg)
 

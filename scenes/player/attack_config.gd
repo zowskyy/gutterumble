@@ -93,4 +93,18 @@ var ATTACK_DATA: Dictionary = {
 		"cancel_start_phase": AttackPhase.NONE,
 		"cancel_end_phase":   AttackPhase.NONE,
 	},
+	# Musou-style "unleash" — instant AOE, not routed through the windup/active/
+	# recovery phase system (see SpecialMeter). range/damage/knockback are the
+	# only fields player_controller.gd's _do_special_aoe() reads from this.
+	"special_aoe": {
+		"damage":             35.0,
+		"knockback":          10.0,
+		"range":              4.0,
+		"windup_time":        0.0,
+		"active_time":        0.0,
+		"recovery_time":      0.0,
+		"can_cancel_into":    [],
+		"cancel_start_phase": AttackPhase.NONE,
+		"cancel_end_phase":   AttackPhase.NONE,
+	},
 }

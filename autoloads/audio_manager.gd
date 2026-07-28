@@ -22,6 +22,7 @@ const SFX_PATHS: Dictionary = {
 	"win":         "res://assets/audio/sfx/win.ogg",
 	"lose":        "res://assets/audio/sfx/lose.ogg",
 	"combo_milestone": "res://assets/audio/sfx/combo_milestone.ogg",
+	"special_activate": "res://assets/audio/sfx/special_activate.ogg",
 }
 
 const MUSIC_PATHS: Dictionary = {

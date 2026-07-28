@@ -92,6 +92,19 @@ offset_bottom = 26.0
 value = 100.0
 show_percentage = false
 
+[node name="SpecialGaugeBar" type="ProgressBar" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.02
+anchor_top = 0.09
+anchor_right = 0.38
+anchor_bottom = 0.09
+offset_bottom = 14.0
+max_value = 100.0
+value = 0.0
+show_percentage = false
+modulate = Color(1.0, 0.85, 0.2, 1.0)
+
 [node name="EnemyHealthBar" type="ProgressBar" parent="HUD/HUDRoot" unique_id=2000810139]
 layout_mode = 1
 anchors_preset = -1

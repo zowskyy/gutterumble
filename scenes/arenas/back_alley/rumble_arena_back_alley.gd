@@ -37,6 +37,7 @@ var _pause_menu: CanvasLayer  = null
 @onready var _hud_result: Label          = $HUD/HUDRoot/RoundResultLabel
 @onready var _hud_rounds: Label          = $HUD/HUDRoot/RoundsLabel
 @onready var _hud_combo: Label           = $HUD/HUDRoot/ComboLabel
+@onready var _hud_special: ProgressBar   = $HUD/HUDRoot/SpecialGaugeBar
 
 const COMBO_RESET_SECS := 1.8
 var _combo_count: int        = 0
@@ -72,6 +73,10 @@ func _ready() -> void:
 	RoundManager.reset()
 	RoundManager.round_over.connect(_on_round_over)
 	RoundManager.match_over.connect(_on_match_over)
+
+	# SpecialMeter — fresh match starts empty; persists across rounds after that
+	SpecialMeter.reset()
+	SpecialMeter.charge_changed.connect(_on_special_charge_changed)
 
 	AudioManager.play_music("arena_theme")
 	_refresh_round_pips()
@@ -207,6 +212,11 @@ func _on_enemy_health_changed(new_hp: float, max_hp: float) -> void:
 	if _hud_enemy_hp:
 		_hud_enemy_hp.max_value = max_hp
 		_hud_enemy_hp.value     = new_hp
+
+func _on_special_charge_changed(value: float, max_value: float) -> void:
+	if _hud_special:
+		_hud_special.max_value = max_value
+		_hud_special.value     = value
 
 # ── "Gutter Streak" — persistent combo, unique to this game ──────────────────
 # Most brawlers wipe your combo the instant a round ends. Here it survives
