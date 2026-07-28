@@ -73,6 +73,23 @@ func setup(fighter: Node) -> AnimationTree:
 		_trans(sm, state, "dodge_roll_fwd",   0.04)
 		_trans(sm, state, "attack_heavy_01",  0.04)
 
+	# ── Direct interrupt edges: attack states -> hit-react / KO ───────────────
+	# take_damage() can fire at any time a fighter isn't invulnerable — which
+	# includes every attack state (only DODGE grants invulnerability). Without
+	# a direct edge here, travel() has to path through locomotion_idle as an
+	# intermediate hop (attack_state -> locomotion_idle -> hit_react_*), which
+	# blends through the idle pose first — reads as a stutter/hitch exactly
+	# when getting punished mid-swing, which is one of the most common
+	# moments in real combat. Fast xfade (0.03s) since getting caught
+	# mid-swing should feel abrupt, not smooth.
+	var attack_states: Array[String] = [
+		"attack_light_01", "attack_light_02", "attack_light_03", "attack_heavy_01",
+	]
+	var interrupt_targets: Array[String] = ["hit_react_light", "hit_react_heavy", "ko_front"]
+	for atk in attack_states:
+		for target in interrupt_targets:
+			_trans(sm, atk, target, 0.03)
+
 	# Entry point is the "Start" → locomotion_idle transition added above —
 	# Godot 4's state machine has no separate start_node property/method.
 	anim_tree.active = true

@@ -299,6 +299,9 @@ func _enter_ko() -> void:
 
 # ── AnimationTree helper ──────────────────────────────────────────────────────
 func _travel(state: String) -> void:
+	if _anim_sm == null and _anim_tree:
+		# Self-healing — see identical comment in player_controller.gd.
+		_anim_sm = _anim_tree.get("parameters/playback")
 	if _anim_sm:
 		_anim_sm.travel(state)
 

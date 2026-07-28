@@ -360,6 +360,13 @@ func _enter_ko() -> void:
 
 # ── AnimationTree helpers ─────────────────────────────────────────────────────
 func _travel(state: String) -> void:
+	if _anim_sm == null and _anim_tree:
+		# Self-healing: if the AnimationTree's parameter cache wasn't ready
+		# yet the one time this was fetched in _ready() (e.g. queried in the
+		# same frame tree_root was assigned, before the tree had a chance to
+		# rebuild its parameter list), retry here instead of staying silently
+		# broken for this fighter's entire lifetime.
+		_anim_sm = _anim_tree.get("parameters/playback")
 	if _anim_sm:
 		_anim_sm.travel(state)
 
