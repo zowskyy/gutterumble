@@ -33,12 +33,15 @@ var _decision_timer: float                  = 0.0
 var _target: Node3D = null
 
 # ── Node refs ─────────────────────────────────────────────────────────────────
-@onready var _anim_tree: AnimationTree = get_node_or_null("AnimationTree")
-@onready var _hitbox: Area3D           = get_node_or_null("Hitbox")
+@onready var _hitbox: Area3D = get_node_or_null("Hitbox")
+var _anim_tree: AnimationTree
 var _anim_sm: AnimationNodeStateMachinePlayback
 
 func _ready() -> void:
 	health = max_health
+	_anim_tree = get_node_or_null("AnimationTree")
+	if _anim_tree == null:
+		_anim_tree = AnimationTreeBuilder.setup(self)
 	if _anim_tree:
 		_anim_sm = _anim_tree.get("parameters/playback")
 	if _hitbox:
