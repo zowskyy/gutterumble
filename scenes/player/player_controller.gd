@@ -37,6 +37,8 @@ var _phase_dur: float    = 0.0
 @onready var _hitbox: Area3D = get_node_or_null("Hitbox")
 var _anim_tree: AnimationTree
 var _anim_sm: AnimationNodeStateMachinePlayback
+var _trail_r: AttackTrail
+var _trail_l: AttackTrail
 
 func _ready() -> void:
 	health = max_health
@@ -48,6 +50,21 @@ func _ready() -> void:
 	if _hitbox:
 		_hitbox.monitoring = false
 		_hitbox.area_entered.connect(_on_hitbox_area_entered)
+	_setup_trails()
+
+func _setup_trails() -> void:
+	var model := get_node_or_null("MouseModel")
+	if model == null:
+		return
+	_trail_r = AttackTrail.new()
+	_trail_r.bone_name = "wrist.R"
+	add_child(_trail_r)
+	_trail_r.attach_to(model)
+
+	_trail_l = AttackTrail.new()
+	_trail_l.bone_name = "wrist.L"
+	add_child(_trail_l)
+	_trail_l.attach_to(model)
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
@@ -207,6 +224,10 @@ func _end_attack() -> void:
 
 # ── Hitbox enable/disable ─────────────────────────────────────────────────────
 func _set_hitbox(active: bool) -> void:
+	if _trail_r:
+		_trail_r.set_active(active)
+	if _trail_l:
+		_trail_l.set_active(active)
 	if not _hitbox:
 		return
 	_hitbox.monitoring = active
