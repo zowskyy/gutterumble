@@ -284,13 +284,31 @@ func _on_player_died() -> void:
 		return
 	match_state = MatchState.ROUND_END
 	SaveManager.increment_stat("losses")
+	_play_finisher_beat()
 	RoundManager.record_win(false)
 
 func _on_enemy_died() -> void:
 	if match_state != MatchState.FIGHTING:
 		return
 	match_state = MatchState.ROUND_END
+	_play_finisher_beat()
 	RoundManager.record_win(true)
+
+# ── Finisher cinematic ────────────────────────────────────────────────────────
+# Always focuses the camera on _player, win or lose — Warriors-mode wave
+# clears don't surface which specific enemy delivered the last blow to the
+# arena (GangSpawner only bubbles up wave_cleared/all_waves_cleared, not
+# individual deaths), so tracking a "killer" reference here would need
+# deeper plumbing than this beat is worth. Focusing the protagonist works
+# for both outcomes and needs no mode-specific branching.
+func _play_finisher_beat() -> void:
+	if not is_instance_valid(_player):
+		return
+	if CombatFeel._was_paused:
+		await CombatFeel.hit_stop_ended
+	CombatFeel.finisher_slowmo()
+	if _camera and _camera.has_method("zoom_in_on"):
+		_camera.zoom_in_on(_player, CombatFeel.FINISHER_SLOWMO_DURATION)
 
 func _on_round_over(player_won: bool, player_score: int, enemy_score: int) -> void:
 	_refresh_round_pips()
@@ -347,6 +365,7 @@ func _on_all_waves_cleared() -> void:
 	if match_state != MatchState.FIGHTING:
 		return
 	match_state = MatchState.ROUND_END
+	_play_finisher_beat()
 	RoundManager.record_win(true)
 
 func _show_final_result(player_won: bool) -> void:
