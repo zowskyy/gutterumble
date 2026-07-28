@@ -39,6 +39,20 @@ var _anim_sm: AnimationNodeStateMachinePlayback
 var _trail_r: AttackTrail
 var _trail_l: AttackTrail
 
+# ── Off-screen throttling ──────────────────────────────────────────────────────
+# MultiMeshInstance3D was considered for crowd scaling (many enemies at once
+# in Warriors mode) but doesn't support independent skeletal animation per
+# instance — every instance would share one static pose, freezing background
+# fighters mid-swing. Real animated-crowd batching needs Vertex Animation
+# Texture baking (a shader pipeline disproportionate to this) or a
+# third-party addon. This throttle gets the actual stated goal — many
+# fighters without a framerate cliff — using what Godot supports correctly:
+# skip the AI decision/movement work (the expensive part) for fighters the
+# camera can't currently see. Layered independently of set_physics_process()
+# (which FighterPool/the arena already control for pooling and round
+# countdowns) so the two systems can't fight over the same flag.
+var _visible_on_screen: bool = true
+
 func _ready() -> void:
 	health = max_health
 	_anim_tree = get_node_or_null("AnimationTree")
@@ -50,6 +64,14 @@ func _ready() -> void:
 		_hitbox.monitoring = false
 		_hitbox.area_entered.connect(_on_hitbox_area_entered)
 	_setup_trails()
+	_setup_visibility_throttle()
+
+func _setup_visibility_throttle() -> void:
+	var notifier := VisibleOnScreenNotifier3D.new()
+	notifier.aabb = AABB(Vector3(-0.6, 0.0, -0.6), Vector3(1.2, 2.2, 1.2))
+	add_child(notifier)
+	notifier.screen_entered.connect(func() -> void: _visible_on_screen = true)
+	notifier.screen_exited.connect(func() -> void: _visible_on_screen = false)
 
 func _setup_trails() -> void:
 	var model := get_node_or_null("MouseModel")
@@ -77,6 +99,8 @@ func _physics_process(delta: float) -> void:
 			return
 		AIState.ATTACK:
 			return  # phase timer drives the attack to completion
+	if not _visible_on_screen:
+		return   # off-screen — skip AI/movement, phase timer above still ticks
 	_run_ai(delta)
 	move_and_slide()
 

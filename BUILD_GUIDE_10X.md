@@ -48,11 +48,13 @@ Each slice lists: **what it does**, **files touched**, **why it's Warriors-authe
 
 ## Phase 2 — Crowd density (the "many fighters" promise)
 
-### Slice 6: MultiMesh batching for background fighters
-**What it does:** Once wave sizes go past ~8 simultaneous enemies, switch non-adjacent/background fighters to `MultiMeshInstance3D` rendering (GangSpawner already applies `team_color` per-instance — this reuses that data via `instance_custom_data` instead of separate materials). Keeps draw calls flat as fighter count grows.
-**Files:** `autoloads/gang_spawner.gd` (extend), new `autoloads/crowd_renderer.gd`.
-**Why now, not earlier:** Premature at 3-enemy waves; becomes necessary once `waves` array in the arena scales to 8-16.
-**Verify:** Set a wave to `{"team":1,"count":12}`, confirm FPS stays ≥60 via `PerfLogger`'s CSV.
+### Slice 6: Off-screen AI/movement throttling ~~(originally scoped as MultiMesh batching)~~
+**Revised during implementation:** `MultiMeshInstance3D` was the original plan, but it only varies transform/color/custom-data across instances of one *static* mesh — it has no support for independent skeletal animation per instance. Batching the fighters this way would freeze every background enemy mid-pose, the opposite of "alive battlefield." Real animated-crowd batching needs Vertex Animation Texture baking (a full shader pipeline, disproportionate here) or a third-party addon (license/provenance review needed). Retargeted to what Godot actually supports correctly for this asset type.
+**What it does:** Each `enemy_ai.gd` gets a `VisibleOnScreenNotifier3D`; while off-screen, the AI decision loop and movement are skipped (the phase timer for KO/hit-react still ticks, so state stays correct) — layered independently of `FighterPool`'s `set_physics_process()` so the two don't fight over the same flag.
+**Files:** `scenes/enemies/enemy_ai.gd` (extended, not new files).
+**Bonus fix found along the way:** `GangSpawner._apply_team_color()` was a silent no-op — it looked for a hardcoded `MouseModel/MeshInstance3D` path that doesn't exist in the actual rig (multiple named surfaces nested under a skeleton, not one flat mesh child). Team colors likely never rendered in Warriors mode until this slice. Fixed with a recursive mesh search filtered to clothing-named surfaces only (tinting eyes/teeth/skin the flat team color would look broken).
+**Verify:** Set a wave to `{"team":1,"count":12}` and check `PerfLogger`'s CSV holds ≥60 FPS; confirm enemy gang jackets/pants render in the gang's color, not white.
+**Still pending (asset work, not code):** `fighter_lod.gd` exists from an earlier session but was never wired up — it expects `High`/`Med`/`Low` mesh variants under a `Visuals` node that don't exist yet (only one mesh quality level has been authored). Wiring it now would be a harmless no-op; it needs actual low-poly mesh variants exported from Blender first.
 
 ### Slice 7: Gang banner HUD
 **What it does:** Small portrait-style counter showing "Your Gang: 4" vs "Enemy Gang: 9" with team-colored icons — lets the player read the battlefield at a glance, standard Warriors HUD element.

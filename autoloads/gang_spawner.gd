@@ -76,19 +76,52 @@ func spawn_player(spawn_point: Node3D, team_color: Color = TEAM_COLORS[0]) -> No
 			enemy.set_target(inst)
 	return inst
 
+# Only these mesh surfaces get tinted — clothing reads as "team jacket",
+# but the rig's other surfaces (Mouse.body, Mouse.eyebrow001, Mouse.eyelashes01,
+# Mouse.teeth_base, Mouse.afro01) would look broken painted a flat team
+# color (solid-colored skin/eyes/teeth), not "this fighter's gang colour".
+const CLOTHING_NAME_HINTS: Array[String] = ["jacket", "hoodie", "pants", "cargo", "shoes"]
+
 func _apply_team_color(fighter: Node3D, color: Color) -> void:
-	# Try to reach the mesh via common paths
-	var mesh: MeshInstance3D = (
-		fighter.get_node_or_null("MouseModel/MeshInstance3D") as MeshInstance3D
-	)
-	if mesh == null:
-		mesh = fighter.get_node_or_null("MeshInstance3D") as MeshInstance3D
-	if mesh == null:
+	# The mouse.glb rig has multiple named mesh surfaces (body, hair, hoodie,
+	# pants, shoes, etc.) nested under a skeleton, not a single flat
+	# "MeshInstance3D" child — the previous hardcoded path silently found
+	# nothing and this function was a no-op. Recurse and tint only the
+	# clothing surfaces, same search pattern as attack_trail.gd's skeleton
+	# lookup but filtered by name.
+	var model := fighter.get_node_or_null("MouseModel")
+	if model == null:
 		return
+	var meshes: Array[MeshInstance3D] = []
+	_find_all_meshes(model, meshes)
+	if meshes.is_empty():
+		return
+
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://assets/shaders/team_color_flat.gdshader")
 	mat.set_shader_parameter("team_color", color)
-	mesh.material_override = mat
+
+	var tinted_any := false
+	for mesh in meshes:
+		var name_lower := mesh.name.to_lower()
+		for hint in CLOTHING_NAME_HINTS:
+			if name_lower.contains(hint):
+				mesh.material_override = mat
+				tinted_any = true
+				break
+
+	if not tinted_any:
+		# Naming didn't match any known clothing hint (e.g. a different
+		# character asset) — fall back to tinting everything rather than
+		# silently applying no team colour at all.
+		for mesh in meshes:
+			mesh.material_override = mat
+
+func _find_all_meshes(node: Node, out: Array[MeshInstance3D]) -> void:
+	if node is MeshInstance3D:
+		out.append(node as MeshInstance3D)
+	for child in node.get_children():
+		_find_all_meshes(child, out)
 
 func _on_enemy_died(inst: Node3D) -> void:
 	_active_enemies.erase(inst)
