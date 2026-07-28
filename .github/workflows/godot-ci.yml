@@ -1,0 +1,55 @@
+name: Godot CI
+
+# Runs on every push and PR — catches parse errors, missing autoloads, and
+# broken fighter scale/spawn behavior before they land on main. This is the
+# safety net for the slice-by-slice build: each slice's commit gets checked
+# here automatically.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  headless-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.0
+          use-dotnet: false
+
+      - name: Import project
+        # .import files are gitignored (per-asset editor settings aren't
+        # committed) — a fresh checkout has no .godot/ cache at all, so this
+        # step regenerates it from scratch and surfaces any resource load
+        # failure before scripts are exercised.
+        run: godot --headless --path . --import
+
+      - name: Boot main scene (autoload + parse-error smoke test)
+        # Every autoload (FighterPool, CombatFeel, AudioManager, RoundManager,
+        # SaveManager, SpecialMeter, GangSpawner, VFXPool, AnimationTreeBuilder,
+        # etc.) loads on ANY scene run, so this alone catches parse/reference
+        # errors across the whole autoload layer, not just the main menu.
+        # --quit-after N is a FRAME count, not seconds — 60 frames runs the
+        # scene for ~1s at 60fps then exits cleanly on its own.
+        #
+        # Godot does NOT reliably return a non-zero exit code when a script
+        # fails to parse (a broken autoload can fail silently and the
+        # process still exits 0) — grep the captured output for error
+        # markers instead of trusting the exit code alone.
+        run: |
+          godot --headless --path . res://scenes/main_menu/main_menu.tscn --quit-after 60 \
+            2>&1 | tee godot_boot.log || true
+          ! grep -qE "SCRIPT ERROR|Parse Error|Invalid (call|assignment|get index)" godot_boot.log
+
+      - name: Run spawn validator
+        # Checks fighter height (0.5-3m — catches the exact 0.01-scale bug
+        # from earlier in this project's history), visibility, and
+        # spawn-at-marker accuracy. Non-zero exit fails the job.
+        run: godot --headless --path . res://scenes/test/test_spawn_validator.tscn
