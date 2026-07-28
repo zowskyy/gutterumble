@@ -1,0 +1,43 @@
+[gd_resource type="Environment" load_steps=2 format=3 uid="uid://gutterumble_env_back_alley"]
+
+[sub_resource type="Sky" id="Sky_1"]
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_1")
+sky_custom_fov = 0.0
+
+ambient_light_source = 3
+ambient_light_color = Color(0.08, 0.08, 0.12, 1)
+ambient_light_energy = 0.5
+
+tonemap_mode = 2
+tonemap_exposure = 1.1
+tonemap_white = 6.0
+
+glow_enabled = true
+glow_levels/1 = false
+glow_levels/2 = true
+glow_levels/3 = true
+glow_levels/4 = false
+glow_levels/5 = false
+glow_levels/6 = false
+glow_levels/7 = false
+glow_intensity = 0.6
+glow_strength = 0.9
+glow_bloom = 0.1
+glow_blend_mode = 2
+glow_hdr_threshold = 1.0
+glow_hdr_luminance_cap = 12.0
+
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 1.5
+ssao_power = 1.5
+ssao_detail = 0.5
+ssao_horizon = 0.06
+ssao_sharpness = 0.98
+
+ssil_enabled = false
+
+fog_enabled = false

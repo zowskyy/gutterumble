@@ -26,6 +26,9 @@ NetworkManager="*res://autoloads/network_manager.gd"
 AttackConfig="*res://scenes/player/attack_config.gd"
 CombatManager="*res://scenes/combat/combat_manager.gd"
 SupabaseManager="*res://backend/supabase_manager.gd"
+FighterPool="*res://autoloads/fighter_pool.gd"
+PerfLogger="*res://autoloads/perf_logger.gd"
+GangSpawner="*res://autoloads/gang_spawner.gd"
 
 [display]
 
@@ -51,6 +54,17 @@ dodge={
 ]
 }
 
+[layer_names]
+
+3d_physics/layer_1="Fighters"
+3d_physics/layer_2="Environment"
+3d_physics/layer_3="Hitboxes"
+3d_physics/layer_4="Hurtboxes"
+
 [rendering]
 
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size=4096
+environment/defaults/default_environment="res://assets/environments/arena_back_alley.tres"
+limits/rendering/max_lights_per_object=2

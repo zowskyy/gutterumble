@@ -1,13 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://gutterumble_arena_back_alley"]
+[gd_scene load_steps=8 format=3 uid="uid://gutterumble_arena_back_alley"]
 
 [ext_resource type="Script" path="res://scenes/arenas/back_alley/rumble_arena_back_alley.gd" id="1"]
-
-[sub_resource type="Environment" id="Env_arena"]
-ambient_light_source = 3
-ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.6
-
-[sub_resource type="Sky" id="Sky_arena"]
+[ext_resource type="Environment" path="res://assets/environments/arena_back_alley.tres" id="2"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
 size = Vector2(20, 14)
@@ -27,7 +21,7 @@ script = ExtResource("1")
 
 ; ── World Environment ────────────────────────────────────────────────────────
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Env_arena")
+environment = ExtResource("2")
 
 ; ── Camera — angled 3/4 view, fixed during Phase 1 ───────────────────────────
 [node name="Camera3D" type="Camera3D" parent="."]
@@ -66,6 +60,19 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
 ; Enemy spawns on the right, facing left (-X toward centre)
 [node name="EnemySpawn" type="Node3D" parent="SpawnPoints"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 4, 0, 0)
+
+; Warriors-mode extra spawn points — staggered rows behind enemy side
+[node name="EnemySpawn2" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 0, -2)
+
+[node name="EnemySpawn3" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 0, 2)
+
+[node name="EnemySpawn4" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7, 0, -3)
+
+[node name="EnemySpawn5" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7, 0, 3)
 
 ; ── HUD ───────────────────────────────────────────────────────────────────────
 [node name="HUD" type="CanvasLayer" parent="."]
