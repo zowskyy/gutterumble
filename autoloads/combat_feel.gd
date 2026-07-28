@@ -46,7 +46,7 @@ func _do_shake(strength: float, duration: float) -> void:
 	_shake_strength = strength
 	_shake_time     = duration
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# Hit-stop: runs on real time (ignore time_scale)
 	if _was_paused:
 		_hitstop_remaining -= get_process_delta_time()   # unscaled

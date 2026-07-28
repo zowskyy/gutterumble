@@ -61,7 +61,7 @@ func play_sfx(key: String, pitch_rand: float = 0.08) -> void:
 	player.pitch_scale     = 1.0 + randf_range(-pitch_rand, pitch_rand)
 	player.play()
 
-func play_music(key: String, fade_time: float = 1.0) -> void:
+func play_music(key: String, _fade_time: float = 1.0) -> void:
 	if not MUSIC_PATHS.has(key):
 		return
 	var path: String = MUSIC_PATHS[key]

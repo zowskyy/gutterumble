@@ -18,11 +18,12 @@ func setup(fighter: Node) -> AnimationTree:
 		push_warning("AnimationTreeBuilder: no AnimationPlayer found under MouseModel")
 		return null
 
-	# Build AnimationTree node
+	# Build AnimationTree node — must be added to the scene tree before
+	# get_path_to() can resolve a path to its sibling AnimationPlayer.
 	var anim_tree := AnimationTree.new()
-	anim_tree.name        = "AnimationTree"
-	anim_tree.anim_player = anim_tree.get_path_to(anim_player)
+	anim_tree.name = "AnimationTree"
 	fighter.add_child(anim_tree)
+	anim_tree.anim_player = anim_tree.get_path_to(anim_player)
 
 	# Root: StateMachine
 	var sm := AnimationNodeStateMachine.new()
@@ -72,7 +73,7 @@ func setup(fighter: Node) -> AnimationTree:
 		_trans(sm, state, "dodge_roll_fwd",   0.04)
 		_trans(sm, state, "attack_heavy_01",  0.04)
 
-	sm.set_start_node("locomotion_idle")
+	sm.start_node = "locomotion_idle"
 	anim_tree.active = true
 	return anim_tree
 
@@ -87,7 +88,7 @@ func _add_anim(sm: AnimationNodeStateMachine, node_name: String,
 func _bs_add(bs: AnimationNodeBlendSpace1D, clip: String, val: float) -> void:
 	var n := AnimationNodeAnimation.new()
 	n.animation = clip
-	bs.add_blend_point(n, val)
+	bs.add_blend_point(n, val, -1, clip)
 
 func _trans(sm: AnimationNodeStateMachine, from: String, to: String,
 		xfade: float, auto: bool = false) -> void:
