@@ -36,6 +36,14 @@ var _pause_menu: CanvasLayer  = null
 @onready var _hud_countdown: Label       = $HUD/HUDRoot/CountdownLabel
 @onready var _hud_result: Label          = $HUD/HUDRoot/RoundResultLabel
 @onready var _hud_rounds: Label          = $HUD/HUDRoot/RoundsLabel
+@onready var _hud_combo: Label           = $HUD/HUDRoot/ComboLabel
+
+const COMBO_RESET_SECS := 1.8
+var _combo_count: int        = 0
+var _combo_timer: float      = 0.0
+var _combo_tween: Tween      = null
+var _combo_milestone: int    = 0    # highest flavor tier already announced this streak
+var _last_player_hp: float   = -1.0
 
 # ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -56,10 +64,7 @@ func _ready() -> void:
 	FighterPool.preload_scene(ENEMY_SCENE.resource_path, self)
 
 	# GangSpawner
-	var all_points: Array = []
-	for child in $SpawnPoints.get_children():
-		all_points.append(child)
-	GangSpawner.configure(self, all_points, [1, int(waves[0].get("count", 1))], waves)
+	_configure_gang_spawner()
 	GangSpawner.wave_cleared.connect(_on_wave_cleared)
 	GangSpawner.all_waves_cleared.connect(_on_all_waves_cleared)
 
@@ -85,8 +90,7 @@ func _spawn_classic_mode() -> void:
 	if _player == null:
 		return
 	_player.set_physics_process(false)
-	_player.died.connect(_on_player_died)
-	_player.health_changed.connect(_on_player_health_changed)
+	_connect_player(_player)
 
 	_enemy = FighterPool.pull(ENEMY_SCENE.resource_path, _enemy_spawn.global_transform)
 	if _enemy == null:
@@ -94,8 +98,7 @@ func _spawn_classic_mode() -> void:
 	_enemy.set_physics_process(false)
 	if _enemy.has_method("set_target"):
 		_enemy.set_target(_player)
-	_enemy.died.connect(_on_enemy_died)
-	_enemy.health_changed.connect(_on_enemy_health_changed)
+	_connect_enemy(_enemy)
 
 	# Face each other
 	var gap := _enemy_spawn.global_position - _player_spawn.global_position
@@ -103,33 +106,65 @@ func _spawn_classic_mode() -> void:
 	_enemy.rotation.y  = atan2(-gap.x, -gap.z)
 
 	_sync_hp_bars()
+	_last_player_hp = _player.max_health
 
 	# Dynamic camera targets
 	_camera.call_deferred("set_targets", _player, _enemy)
 
 # ── Warriors mode ─────────────────────────────────────────────────────────────
 
+func _configure_gang_spawner() -> void:
+	# GangSpawner.configure() resets its internal _wave_index to 0 — must be
+	# called again on every round restart, not just once in _ready(), or a
+	# second round in Warriors mode silently spawns zero enemies (the wave
+	# index would already be exhausted from the previous round's clear).
+	var all_points: Array = []
+	for child in $SpawnPoints.get_children():
+		all_points.append(child)
+	GangSpawner.configure(self, all_points, [1, int(waves[0].get("count", 1))], waves)
+
 func _spawn_warriors_mode() -> void:
 	_player = GangSpawner.spawn_player(_player_spawn)
 	if _player == null:
 		return
 	_player.set_physics_process(false)
-	_player.died.connect(_on_player_died)
-	_player.health_changed.connect(_on_player_health_changed)
+	_connect_player(_player)
+	_last_player_hp = _player.max_health
 	GangSpawner.spawn_wave()
 	_camera.call_deferred("set_targets", _player, _player)   # will update when enemies spawn
+
+# ── Signal wiring (guarded — pooled instances are reused, connecting twice
+#    without a guard would fire every callback multiple times per event) ──────
+
+func _connect_player(p: Node3D) -> void:
+	if not p.died.is_connected(_on_player_died):
+		p.died.connect(_on_player_died)
+	if not p.health_changed.is_connected(_on_player_health_changed):
+		p.health_changed.connect(_on_player_health_changed)
+	if p.has_signal("hit_landed") and not p.hit_landed.is_connected(_on_player_hit_landed):
+		p.hit_landed.connect(_on_player_hit_landed)
+
+func _connect_enemy(e: Node3D) -> void:
+	if not e.died.is_connected(_on_enemy_died):
+		e.died.connect(_on_enemy_died)
+	if not e.health_changed.is_connected(_on_enemy_health_changed):
+		e.health_changed.connect(_on_enemy_health_changed)
 
 # ── Countdown ─────────────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
-	if match_state != MatchState.COUNTDOWN:
-		return
-	_countdown -= delta
-	if _countdown > 0.0:
-		if _hud_countdown:
-			_hud_countdown.text = str(ceili(_countdown))
-	else:
-		_start_fight()
+	if match_state == MatchState.COUNTDOWN:
+		_countdown -= delta
+		if _countdown > 0.0:
+			if _hud_countdown:
+				_hud_countdown.text = str(ceili(_countdown))
+		else:
+			_start_fight()
+
+	if _combo_count > 0:
+		_combo_timer -= delta
+		if _combo_timer <= 0.0:
+			_break_combo()
 
 func _start_fight() -> void:
 	if match_state == MatchState.FIGHTING:
@@ -162,11 +197,75 @@ func _on_player_health_changed(new_hp: float, max_hp: float) -> void:
 	if _hud_player_hp:
 		_hud_player_hp.max_value = max_hp
 		_hud_player_hp.value     = new_hp
+	# Getting hit breaks the streak — a fresh respawn's reset_for_respawn()
+	# also emits health_changed at full HP, which never reads as a drop.
+	if _last_player_hp >= 0.0 and new_hp < _last_player_hp:
+		_break_combo()
+	_last_player_hp = new_hp
 
 func _on_enemy_health_changed(new_hp: float, max_hp: float) -> void:
 	if _hud_enemy_hp:
 		_hud_enemy_hp.max_value = max_hp
 		_hud_enemy_hp.value     = new_hp
+
+# ── "Gutter Streak" — persistent combo, unique to this game ──────────────────
+# Most brawlers wipe your combo the instant a round ends. Here it survives
+# every round transition and wave clear — it only breaks if YOU get tagged,
+# or if you go quiet for COMBO_RESET_SECS. Escalating flavor text ties back
+# to the game's own tagline ("Every gutter has a king"): rack up enough hits
+# across an entire match and you earn the title, not just a number.
+
+func _on_player_hit_landed(_target: Node3D, _attack_id: String, _damage: float) -> void:
+	_combo_count += 1
+	_combo_timer  = COMBO_RESET_SECS
+	if _combo_count < 2 or not _hud_combo:
+		return
+
+	_hud_combo.text     = _combo_text(_combo_count)
+	_hud_combo.visible  = true
+	_hud_combo.modulate = _combo_color(_combo_count)
+	_maybe_announce_milestone(_combo_count)
+
+	if _combo_tween and _combo_tween.is_valid():
+		_combo_tween.kill()
+	_hud_combo.scale = Vector2(1.35, 1.35)
+	_combo_tween = create_tween()
+	_combo_tween.tween_property(_hud_combo, "scale", Vector2.ONE, 0.18) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _combo_text(count: int) -> String:
+	if count >= 15:
+		return "%d HIT — GUTTER KING!" % count
+	if count >= 10:
+		return "%d HIT — RAMPAGE!" % count
+	if count >= 6:
+		return "%d HIT — ON A TEAR!" % count
+	return "%d HIT COMBO!" % count
+
+func _combo_color(count: int) -> Color:
+	if count >= 15:
+		return Color(0.85, 0.55, 1.0)   # violet-gold — the "king" tier
+	if count >= 10:
+		return Color(1.0, 0.25, 0.2)    # red — rampage
+	if count >= 6:
+		return Color(1.0, 0.75, 0.1)    # gold — on a tear
+	return Color(1.0, 1.0, 1.0)          # white — starting out
+
+func _maybe_announce_milestone(count: int) -> void:
+	var tier := 0
+	if count >= 15: tier = 3
+	elif count >= 10: tier = 2
+	elif count >= 6: tier = 1
+	if tier > _combo_milestone:
+		_combo_milestone = tier
+		AudioManager.play_sfx("combo_milestone")
+
+func _break_combo() -> void:
+	_combo_count     = 0
+	_combo_timer     = 0.0
+	_combo_milestone = 0
+	if _hud_combo:
+		_hud_combo.visible = false
 
 # ── Round / match outcome ─────────────────────────────────────────────────────
 
@@ -185,16 +284,46 @@ func _on_enemy_died() -> void:
 
 func _on_round_over(player_won: bool, player_score: int, enemy_score: int) -> void:
 	_refresh_round_pips()
+	# Combo deliberately NOT reset here — it's a running "Gutter Streak" that
+	# survives round transitions (see _break_combo for the only ways it ends).
 	if _hud_result:
 		var round_txt := "Round %d  %d – %d" % [RoundManager.current_round - 1, player_score, enemy_score]
 		_hud_result.text    = ("WIN!" if player_won else "LOSE!") + "\n" + round_txt
 		_hud_result.visible = true
 
+	await get_tree().create_timer(ROUND_END_WAIT).timeout
+	if match_state == MatchState.ENDED:
+		return   # _on_match_over already fired and owns cleanup/scene change
+	_start_next_round()
+
 func _on_match_over(player_won: bool) -> void:
+	match_state = MatchState.ENDED   # set synchronously so _on_round_over's
+	                                  # delayed check (above) reads it correctly
 	if player_won:
 		SaveManager.increment_stat("wins")
 	match_ended.emit(player_won)
 	_show_final_result(player_won)
+
+func _start_next_round() -> void:
+	if _hud_result:
+		_hud_result.visible = false
+	if _hud_countdown:
+		_hud_countdown.visible = true
+	_countdown   = COUNTDOWN_SECS
+	match_state  = MatchState.SETUP
+
+	if warriors_mode:
+		GangSpawner.return_all()
+		_configure_gang_spawner()
+		_spawn_warriors_mode()
+	else:
+		if is_instance_valid(_player):
+			FighterPool.push(PLAYER_SCENE.resource_path, _player)
+		if is_instance_valid(_enemy):
+			FighterPool.push(ENEMY_SCENE.resource_path, _enemy)
+		_spawn_classic_mode()
+
+	match_state = MatchState.COUNTDOWN
 
 func _on_wave_cleared(wave_index: int) -> void:
 	if match_state != MatchState.FIGHTING:

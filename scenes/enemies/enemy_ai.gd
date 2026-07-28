@@ -270,3 +270,17 @@ func get_health_percent() -> float:
 
 func is_dead() -> bool:
 	return ai_state == AIState.KO
+
+# ── Respawn (called by FighterPool.pull — pooled instances are reused across
+#    rounds/waves and otherwise keep whatever state they had at KO) ───────────
+func reset_for_respawn() -> void:
+	health            = max_health
+	ai_state          = AIState.IDLE
+	combat_state      = AttackConfig.CombatState.IDLE
+	attack_phase      = AttackConfig.AttackPhase.NONE
+	current_attack_id = ""
+	invulnerable      = false
+	velocity          = Vector3.ZERO
+	_set_hitbox(false)
+	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)
+	health_changed.emit(health, max_health)

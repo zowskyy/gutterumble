@@ -144,6 +144,22 @@ offset_bottom = 28.0
 text = "○ ○   vs   ○ ○"
 horizontal_alignment = 1
 
+[node name="ComboLabel" type="Label" parent="HUD/HUDRoot"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.62
+anchor_bottom = 0.62
+offset_left = -160.0
+offset_right = 160.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 28
+text = "0 HIT COMBO!"
+horizontal_alignment = 1
+pivot_offset = Vector2(160, 20)
+
 ; ── Arena boundary walls (invisible blockers) ──────────────────────────────────
 [node name="Walls" type="Node3D" parent="."]
 

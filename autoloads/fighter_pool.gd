@@ -41,6 +41,8 @@ func pull(scene_path: String, spawn_transform: Transform3D) -> Node3D:
 	inst.global_transform = spawn_transform
 	inst.visible = true
 	inst.set_physics_process(true)
+	if inst.has_method("reset_for_respawn"):
+		inst.reset_for_respawn()   # pooled instances otherwise keep KO state forever
 	_active[scene_path].append(inst)
 	return inst
 

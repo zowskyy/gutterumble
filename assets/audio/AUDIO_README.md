@@ -16,6 +16,7 @@ Drop files here. AudioManager will pick them up automatically — no code change
 | `fight_start.ogg` | "FIGHT!" moment |
 | `win.ogg` | Player wins a round |
 | `lose.ogg` | Player loses a round |
+| `combo_milestone.ogg` | "Gutter Streak" crosses a tier (6, 10, or 15 hits) — a short rising stinger works well |
 
 ## music/ — Music loops (.ogg)
 
