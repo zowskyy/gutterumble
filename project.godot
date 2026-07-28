@@ -65,6 +65,5 @@ dodge={
 
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
-lights_and_shadows/directional_shadow/size=4096
 environment/defaults/default_environment="res://assets/environments/arena_back_alley.tres"
 limits/rendering/max_lights_per_object=2

@@ -27,7 +27,7 @@ func _process(_delta: float) -> void:
 	if _cam == null:
 		_cam = get_viewport().get_camera_3d()
 		return
-	var dist := get_parent().global_position.distance_to(_cam.global_position)
+	var dist: float = (get_parent() as Node3D).global_position.distance_to(_cam.global_position)
 	var target: int = 0
 	for i in range(lod_distances.size()):
 		if dist > lod_distances[i]:

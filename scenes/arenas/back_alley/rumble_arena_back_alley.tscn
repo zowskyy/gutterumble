@@ -1,119 +1,106 @@
-[gd_scene load_steps=8 format=3 uid="uid://gutterumble_arena_back_alley"]
+[gd_scene format=3 uid="uid://cbbdwpwj21b7l"]
 
-[ext_resource type="Script" path="res://scenes/arenas/back_alley/rumble_arena_back_alley.gd" id="1"]
-[ext_resource type="Environment" path="res://assets/environments/arena_back_alley.tres" id="2"]
+[ext_resource type="Script" uid="uid://cy42nmi1303u" path="res://scenes/arenas/back_alley/rumble_arena_back_alley.gd" id="1"]
+[ext_resource type="Environment" uid="uid://cnlek35qwe12e" path="res://assets/environments/arena_back_alley.tres" id="2"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
 size = Vector2(20, 14)
 
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+emission_enabled = true
+emission = Color(0.8, 0.8, 0.8, 1)
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(20, 0.2, 14)
 
-[sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(1, 1, 1, 1)
-emission_enabled = true
-emission = Color(0.8, 0.8, 0.8, 1)
-emission_energy_multiplier = 1.0
-
-; ── Scene root ────────────────────────────────────────────────────────────────
-[node name="RumbleArenaBackAlley" type="Node3D"]
+[node name="RumbleArenaBackAlley" type="Node3D" unique_id=1057760375]
 script = ExtResource("1")
 
-; ── World Environment ────────────────────────────────────────────────────────
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=569834730]
 environment = ExtResource("2")
 
-; ── Camera — angled 3/4 view, fixed during Phase 1 ───────────────────────────
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1663272650]
 transform = Transform3D(1, 0, 0, 0, 0.766, 0.643, 0, -0.643, 0.766, 0, 7, 11)
 current = true
 
-; ── Lighting ──────────────────────────────────────────────────────────────────
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1948131726]
 transform = Transform3D(0.866, -0.353, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 8, 0)
 light_energy = 0.85
 shadow_enabled = true
 
-[node name="AmbientLight" type="OmniLight3D" parent="."]
+[node name="AmbientLight" type="OmniLight3D" parent="." unique_id=1730251268]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
 light_energy = 0.3
 omni_range = 20.0
 
-; ── Floor (static, walkable) ──────────────────────────────────────────────────
-[node name="Floor" type="StaticBody3D" parent="."]
+[node name="Floor" type="StaticBody3D" parent="." unique_id=226599274]
 
-[node name="FloorMesh" type="MeshInstance3D" parent="Floor"]
+[node name="FloorMesh" type="MeshInstance3D" parent="Floor" unique_id=42142495]
 mesh = SubResource("PlaneMesh_floor")
 surface_material_override/0 = SubResource("Mat_floor")
 
-[node name="FloorCollision" type="CollisionShape3D" parent="Floor"]
+[node name="FloorCollision" type="CollisionShape3D" parent="Floor" unique_id=602041005]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("BoxShape3D_floor")
 
-; ── Spawn points ──────────────────────────────────────────────────────────────
-[node name="SpawnPoints" type="Node3D" parent="."]
+[node name="SpawnPoints" type="Node3D" parent="." unique_id=447905635]
 
-; Player spawns on the left, facing right (+X toward centre)
-[node name="PlayerSpawn" type="Node3D" parent="SpawnPoints"]
+[node name="PlayerSpawn" type="Node3D" parent="SpawnPoints" unique_id=1178909964]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
 
-; Enemy spawns on the right, facing left (-X toward centre)
-[node name="EnemySpawn" type="Node3D" parent="SpawnPoints"]
+[node name="EnemySpawn" type="Node3D" parent="SpawnPoints" unique_id=1430489436]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 4, 0, 0)
 
-; Warriors-mode extra spawn points — staggered rows behind enemy side
-[node name="EnemySpawn2" type="Node3D" parent="SpawnPoints"]
+[node name="EnemySpawn2" type="Node3D" parent="SpawnPoints" unique_id=1010903254]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 0, -2)
 
-[node name="EnemySpawn3" type="Node3D" parent="SpawnPoints"]
+[node name="EnemySpawn3" type="Node3D" parent="SpawnPoints" unique_id=1063858958]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 0, 2)
 
-[node name="EnemySpawn4" type="Node3D" parent="SpawnPoints"]
+[node name="EnemySpawn4" type="Node3D" parent="SpawnPoints" unique_id=2006743571]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7, 0, -3)
 
-[node name="EnemySpawn5" type="Node3D" parent="SpawnPoints"]
+[node name="EnemySpawn5" type="Node3D" parent="SpawnPoints" unique_id=74438639]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7, 0, 3)
 
-; ── HUD ───────────────────────────────────────────────────────────────────────
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=20262318]
 layer = 10
+visible = false
 
-[node name="HUDRoot" type="Control" parent="HUD"]
+[node name="HUDRoot" type="Control" parent="HUD" unique_id=550720674]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
-; Player health bar — top-left
-[node name="PlayerHealthBar" type="ProgressBar" parent="HUD/HUDRoot"]
+[node name="PlayerHealthBar" type="ProgressBar" parent="HUD/HUDRoot" unique_id=69597444]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.02
 anchor_top = 0.04
 anchor_right = 0.38
 anchor_bottom = 0.04
 offset_bottom = 26.0
-min_value = 0.0
-max_value = 100.0
 value = 100.0
 show_percentage = false
 
-; Enemy health bar — top-right (fill right-to-left via negative scale)
-[node name="EnemyHealthBar" type="ProgressBar" parent="HUD/HUDRoot"]
+[node name="EnemyHealthBar" type="ProgressBar" parent="HUD/HUDRoot" unique_id=2000810139]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.62
 anchor_top = 0.04
 anchor_right = 0.98
 anchor_bottom = 0.04
 offset_bottom = 26.0
-min_value = 0.0
-max_value = 100.0
 value = 100.0
 show_percentage = false
 
-; Countdown — centred vertically above mid-screen
-[node name="CountdownLabel" type="Label" parent="HUD/HUDRoot"]
+[node name="CountdownLabel" type="Label" parent="HUD/HUDRoot" unique_id=628831288]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.5
 anchor_top = 0.38
 anchor_right = 0.5
@@ -125,9 +112,10 @@ text = "3"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-; Round result — centre screen, hidden until match ends
-[node name="RoundResultLabel" type="Label" parent="HUD/HUDRoot"]
+[node name="RoundResultLabel" type="Label" parent="HUD/HUDRoot" unique_id=1325367541]
+visible = false
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.5
 anchor_top = 0.45
 anchor_right = 0.5
@@ -135,7 +123,5 @@ anchor_bottom = 0.45
 offset_left = -120.0
 offset_right = 120.0
 offset_bottom = 48.0
-text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false
