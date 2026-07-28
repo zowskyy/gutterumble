@@ -23,7 +23,7 @@ In `scenes/player/fighter.tscn` (and identically for `mouse_enemy.tscn`):
    → Godot creates an inherited `Node3D` child with the mesh + AnimationPlayer.
 4. Rename it to `CharacterMesh` so scripts can find it predictably.
 
----
+---````
 
 ## 3. Add AnimationTree node
 
@@ -34,7 +34,7 @@ In the same scene, add a child to `Fighter` root:
 - **active**: ON
 
 Set **Tree Root** to **AnimationNodeStateMachine**.
-
+ 
 ---
 
 ## 4. Build the state machine

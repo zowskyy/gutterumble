@@ -89,7 +89,9 @@ func _handle_locomotion(delta: float) -> void:
 		return
 
 	if iv.length() > 0.05:
-		velocity = velocity.lerp(Vector3(iv.x, 0.0, iv.y) * run_speed, acceleration * delta)
+		var dir := Vector3(iv.x, 0.0, iv.y)
+		velocity = velocity.lerp(dir * run_speed, acceleration * delta)
+		rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), 12.0 * delta)
 		combat_state = AttackConfig.CombatState.LOCOMOTION
 		_travel(AttackConfig.ANIM_LOCOMOTION_TREE)
 	else:
@@ -151,6 +153,7 @@ func _can_cancel_into(next_id: String) -> bool:
 
 # ── Dodge ─────────────────────────────────────────────────────────────────────
 func _start_dodge(direction: Vector3) -> void:
+	AudioManager.play_sfx("dodge")
 	combat_state     = AttackConfig.CombatState.DODGE
 	attack_phase     = AttackConfig.AttackPhase.WINDUP
 	current_attack_id = "dodge_roll_fwd"

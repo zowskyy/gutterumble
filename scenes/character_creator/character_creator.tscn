@@ -6,19 +6,232 @@
 script = ExtResource("1")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 5)
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.34, 0, -0.34, 0.94, 0, 1.5, 4.0)
 current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.25, 0.433, 0, 0.866, 0.5, -0.5, -0.433, 0.75, 0, 3, 2)
+light_energy = 1.0
 
 [node name="BaseBody" type="Node3D" parent="."]
 
+; ── UI ────────────────────────────────────────────────────────────────────────
 [node name="UI" type="CanvasLayer" parent="."]
 
+[node name="Background" type="ColorRect" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.06, 0.08, 0.85)
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="UI"]
+layout_mode = 3
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 20.0
+offset_right = 120.0
+offset_bottom = 50.0
+text = "CUSTOMIZE"
+horizontal_alignment = 1
+
+; ── Slot panel ─────────────────────────────────────────────────────────────
+[node name="Slots" type="VBoxContainer" parent="UI"]
+layout_mode = 3
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 20.0
+offset_top = -150.0
+offset_right = 320.0
+offset_bottom = 150.0
+theme_override_constants/separation = 8
+
+; Skin row
+[node name="SkinRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/SkinRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Skin"
+
+[node name="Prev" type="Button" parent="UI/Slots/SkinRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/SkinRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Dark"
+horizontal_alignment = 1
+
+[node name="Next" type="Button" parent="UI/Slots/SkinRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; Hair row
+[node name="HairRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/HairRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Hair"
+
+[node name="Prev" type="Button" parent="UI/Slots/HairRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/HairRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Afro"
+horizontal_alignment = 1
+
+[node name="Next" type="Button" parent="UI/Slots/HairRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; Shirt row
+[node name="ShirtRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/ShirtRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Shirt"
+
+[node name="Prev" type="Button" parent="UI/Slots/ShirtRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/ShirtRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Hoodie"
+horizontal_alignment = 1
+
+[node name="Next" type="Button" parent="UI/Slots/ShirtRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; Pants row
+[node name="PantsRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/PantsRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Pants"
+
+[node name="Prev" type="Button" parent="UI/Slots/PantsRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/PantsRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Cargo"
+horizontal_alignment = 1
+
+[node name="Next" type="Button" parent="UI/Slots/PantsRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; Shoes row
+[node name="ShoeRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/ShoeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Shoes"
+
+[node name="Prev" type="Button" parent="UI/Slots/ShoeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/ShoeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Kicks"
+horizontal_alignment = 1
+
+[node name="Next" type="Button" parent="UI/Slots/ShoeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; Gang colour row
+[node name="GangRow" type="HBoxContainer" parent="UI/Slots"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotLabel" type="Label" parent="UI/Slots/GangRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "Gang"
+
+[node name="Prev" type="Button" parent="UI/Slots/GangRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "<"
+
+[node name="Label" type="Label" parent="UI/Slots/GangRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 0)
+text = "Blue"
+horizontal_alignment = 1
+
+[node name="Swatch" type="ColorRect" parent="UI/Slots/GangRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(28, 28)
+color = Color(0.15, 0.45, 1.0)
+
+[node name="Next" type="Button" parent="UI/Slots/GangRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = ">"
+
+; ── Action buttons ─────────────────────────────────────────────────────────
+[node name="SaveButton" type="Button" parent="UI"]
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -56.0
+offset_right = 220.0
+offset_bottom = -12.0
+text = "SAVE LOOK"
+
 [node name="BackButton" type="Button" parent="UI"]
+layout_mode = 3
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -160.0
-offset_top = -60.0
+offset_left = -220.0
+offset_top = -56.0
+offset_right = -20.0
+offset_bottom = -12.0
 text = "< BACK"

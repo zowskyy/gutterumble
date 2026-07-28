@@ -13,6 +13,12 @@ emission = Color(0.8, 0.8, 0.8, 1)
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(20, 0.2, 14)
 
+[sub_resource type="BoxShape3D" id="WallShapeZ"]
+size = Vector3(20, 2, 0.3)
+
+[sub_resource type="BoxShape3D" id="WallShapeX"]
+size = Vector3(0.3, 2, 14)
+
 [node name="RumbleArenaBackAlley" type="Node3D" unique_id=1057760375]
 script = ExtResource("1")
 
@@ -124,3 +130,47 @@ offset_right = 120.0
 offset_bottom = 48.0
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="RoundsLabel" type="Label" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.10
+anchor_bottom = 0.10
+offset_left = -120.0
+offset_right = 120.0
+offset_bottom = 28.0
+text = "○ ○   vs   ○ ○"
+horizontal_alignment = 1
+
+; ── Arena boundary walls (invisible blockers) ──────────────────────────────────
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="WallNorth" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallNorth"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -7.2)
+shape = SubResource("WallShapeZ")
+
+[node name="WallSouth" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallSouth"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 7.2)
+shape = SubResource("WallShapeZ")
+
+[node name="WallWest" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallWest"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.2, 1, 0)
+shape = SubResource("WallShapeX")
+
+[node name="WallEast" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallEast"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.2, 1, 0)
+shape = SubResource("WallShapeX")

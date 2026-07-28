@@ -32,6 +32,7 @@ GangSpawner="*res://autoloads/gang_spawner.gd"
 CombatFeel="*res://autoloads/combat_feel.gd"
 AudioManager="*res://autoloads/audio_manager.gd"
 RoundManager="*res://autoloads/round_manager.gd"
+SaveManager="*res://autoloads/save_manager.gd"
 
 [display]
 

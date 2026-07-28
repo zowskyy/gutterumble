@@ -1,21 +1,45 @@
 extends Control
 
-@onready var rumble_button: Button = $ButtonContainer/RumbleButton
-@onready var customize_button: Button = $ButtonContainer/CustomizeButton
-@onready var crew_button: Button = $ButtonContainer/CrewButton
+@onready var _rumble_btn: Button   = $ButtonContainer/RumbleButton
+@onready var _warriors_btn: Button = $ButtonContainer/WarriorsButton
+@onready var _customize_btn: Button = $ButtonContainer/CustomizeButton
+@onready var _quit_btn: Button     = $ButtonContainer/QuitButton
+@onready var _stats_label: Label   = $StatsLabel
 
 func _ready() -> void:
-	if rumble_button == null or customize_button == null or crew_button == null:
-		return
-	rumble_button.pressed.connect(_on_rumble_pressed)
-	customize_button.pressed.connect(_on_customize_pressed)
-	crew_button.pressed.connect(_on_crew_pressed)
+	AudioManager.play_music("menu_theme")
+	_update_stats()
 
-func _on_rumble_pressed() -> void:
+	if _rumble_btn:
+		_rumble_btn.pressed.connect(_on_rumble)
+	if _warriors_btn:
+		_warriors_btn.pressed.connect(_on_warriors)
+	if _customize_btn:
+		_customize_btn.pressed.connect(_on_customize)
+	if _quit_btn:
+		_quit_btn.pressed.connect(_on_quit)
+
+func _update_stats() -> void:
+	if not _stats_label:
+		return
+	var w := SaveManager.get_stat("wins")
+	var l := SaveManager.get_stat("losses")
+	_stats_label.text = "W %d  |  L %d" % [w, l]
+
+func _on_rumble() -> void:
+	AudioManager.play_sfx("ui_confirm")
+	SaveManager.save_setting("warriors_mode", false)
 	GameManager.go_to_rumble_arena_back_alley()
 
-func _on_customize_pressed() -> void:
+func _on_warriors() -> void:
+	AudioManager.play_sfx("ui_confirm")
+	SaveManager.save_setting("warriors_mode", true)
+	GameManager.go_to_rumble_arena_back_alley()
+
+func _on_customize() -> void:
+	AudioManager.play_sfx("ui_confirm")
 	GameManager.go_to_character_creator()
 
-func _on_crew_pressed() -> void:
-	pass
+func _on_quit() -> void:
+	AudioManager.play_sfx("ui_back")
+	GameManager.quit_game()
