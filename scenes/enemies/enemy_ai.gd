@@ -123,8 +123,21 @@ func _run_ai(delta: float) -> void:
 	else:
 		_go_idle()
 
+# Crowd barks: relies entirely on AudioManager's own global cooldown to set
+# the actual pacing — this is just an occasional "roll the dice" call site,
+# not a rate limiter itself. Only fires from APPROACH/IDLE (not mid-attack,
+# dodge, hit-react, or KO), which naturally maps to "fighters not currently
+# in the thick of it" without needing to track who the player's "real"
+# opponent is — that concept doesn't cleanly exist in a free-for-all wave.
+const BARK_CHANCE_PER_FRAME := 1.0 / 600.0
+
+func _maybe_bark() -> void:
+	if randf() < BARK_CHANCE_PER_FRAME:
+		AudioManager.play_bark(self)
+
 func _approach(flat_target: Vector3, delta: float) -> void:
 	ai_state = AIState.APPROACH
+	_maybe_bark()
 	_travel(AttackConfig.ANIM_LOCOMOTION_TREE)
 	var dir := (flat_target - global_position).normalized()
 	velocity = velocity.lerp(dir * move_speed, 14.0 * delta)
@@ -137,6 +150,7 @@ func _approach(flat_target: Vector3, delta: float) -> void:
 func _go_idle() -> void:
 	ai_state = AIState.IDLE
 	combat_state = AttackConfig.CombatState.IDLE
+	_maybe_bark()
 	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)
 	velocity = velocity.lerp(Vector3.ZERO, 0.25)
 
