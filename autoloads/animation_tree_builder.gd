@@ -73,7 +73,8 @@ func setup(fighter: Node) -> AnimationTree:
 		_trans(sm, state, "dodge_roll_fwd",   0.04)
 		_trans(sm, state, "attack_heavy_01",  0.04)
 
-	sm.start_node = "locomotion_idle"
+	# Entry point is the "Start" → locomotion_idle transition added above —
+	# Godot 4's state machine has no separate start_node property/method.
 	anim_tree.active = true
 	return anim_tree
 
