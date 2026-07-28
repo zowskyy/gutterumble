@@ -21,7 +21,6 @@ attack_range = 1.8
 decision_interval = 0.4
 
 [node name="MouseModel" parent="." instance=ExtResource("2_glb")]
-transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

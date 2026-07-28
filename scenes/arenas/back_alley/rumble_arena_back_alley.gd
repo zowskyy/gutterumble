@@ -2,7 +2,7 @@ extends Node3D
 # Back Alley arena — Warriors-mode match manager.
 # Phase 1:  1 player vs 1 AI (classic brawler)
 # Phase 2+: player gang vs enemy waves (Warriors-style)
-# Coordinates FighterPool, GangSpawner, PerfLogger, and CombatHUD.
+# Coordinates FighterPool, GangSpawner, RoundManager, CombatFeel, AudioManager.
 
 enum MatchState { SETUP, COUNTDOWN, FIGHTING, ENDED }
 
@@ -39,6 +39,14 @@ var _enemy: Node3D          = null   # classic mode only
 @onready var _hud_result: Label          = $HUD/HUDRoot/RoundResultLabel
 
 func _ready() -> void:
+	# Register camera for screen shake
+	var cam := get_viewport().get_camera_3d()
+	if cam:
+		CombatFeel.register_camera(cam)
+
+	# Start music
+	AudioManager.play_music("arena_theme")
+
 	# Pre-warm the pool for this arena
 	FighterPool.preload_scene(PLAYER_SCENE.resource_path, self)
 	FighterPool.preload_scene(ENEMY_SCENE.resource_path, self)
@@ -51,6 +59,10 @@ func _ready() -> void:
 	GangSpawner.configure(self, all_points, [1, int(waves[0].get("count", 1))], waves)
 	GangSpawner.wave_cleared.connect(_on_wave_cleared)
 	GangSpawner.all_waves_cleared.connect(_on_all_waves_cleared)
+
+	RoundManager.reset()
+	RoundManager.round_over.connect(_on_round_over)
+	RoundManager.match_over.connect(_on_match_over)
 
 	if warriors_mode:
 		_spawn_warriors_mode()
@@ -123,6 +135,8 @@ func _start_fight() -> void:
 	if match_state == MatchState.FIGHTING:
 		return
 	match_state = MatchState.FIGHTING
+	AudioManager.play_sfx("fight_start")
+	RoundManager.start_round()
 	if _hud_countdown:
 		_hud_countdown.text = "FIGHT!"
 	get_tree().create_timer(0.5).timeout.connect(func() -> void:
@@ -152,15 +166,23 @@ func _on_player_died() -> void:
 	if match_state != MatchState.FIGHTING:
 		return
 	match_state = MatchState.ENDED
-	match_ended.emit(false)
-	_show_result(false)
+	RoundManager.record_win(false)
 
 func _on_enemy_died() -> void:
 	if match_state != MatchState.FIGHTING:
 		return
 	match_state = MatchState.ENDED
-	match_ended.emit(true)
-	_show_result(true)
+	RoundManager.record_win(true)
+
+func _on_round_over(player_won: bool, player_score: int, enemy_score: int) -> void:
+	var score_text := "Round %d  —  %d : %d" % [RoundManager.current_round - 1, player_score, enemy_score]
+	if _hud_result:
+		_hud_result.text    = ("YOU WIN!" if player_won else "YOU LOSE!") + "\n" + score_text
+		_hud_result.visible = true
+
+func _on_match_over(player_won: bool) -> void:
+	match_ended.emit(player_won)
+	_show_result(player_won)
 
 func _on_wave_cleared(wave_index: int) -> void:
 	if match_state != MatchState.FIGHTING:

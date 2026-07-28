@@ -65,7 +65,6 @@ transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7, 0, 3)
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=20262318]
 layer = 10
-visible = false
 
 [node name="HUDRoot" type="Control" parent="HUD" unique_id=550720674]
 layout_mode = 3

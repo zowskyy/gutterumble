@@ -29,6 +29,9 @@ SupabaseManager="*res://backend/supabase_manager.gd"
 FighterPool="*res://autoloads/fighter_pool.gd"
 PerfLogger="*res://autoloads/perf_logger.gd"
 GangSpawner="*res://autoloads/gang_spawner.gd"
+CombatFeel="*res://autoloads/combat_feel.gd"
+AudioManager="*res://autoloads/audio_manager.gd"
+RoundManager="*res://autoloads/round_manager.gd"
 
 [display]
 

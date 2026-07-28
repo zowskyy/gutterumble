@@ -1,0 +1,36 @@
+# Audio Assets
+
+Drop files here. AudioManager will pick them up automatically — no code changes needed.
+
+## sfx/ — Sound effects (.ogg preferred, .wav works)
+
+| Filename | When it plays |
+|---|---|
+| `hit_light.ogg` | Light attack lands |
+| `hit_heavy.ogg` | Heavy attack lands |
+| `hit_ko.ogg` | KO blow |
+| `dodge.ogg` | Dodge roll starts |
+| `ui_confirm.ogg` | Button press |
+| `ui_back.ogg` | Back / cancel |
+| `countdown.ogg` | Round countdown tick |
+| `fight_start.ogg` | "FIGHT!" moment |
+| `win.ogg` | Player wins a round |
+| `lose.ogg` | Player loses a round |
+
+## music/ — Music loops (.ogg)
+
+| Filename | When it plays |
+|---|---|
+| `arena_theme.ogg` | In-arena background music |
+| `menu_theme.ogg` | Main menu background |
+
+## Free sources (license-friendly)
+- https://freesound.org (CC0 / CC-BY — check per file, add to CREDITS if CC-BY)
+- https://opengameart.org (filter by CC0)
+- https://pixabay.com/sound-effects (free for commercial use)
+
+## Recommended punch SFX pack
+Search freesound.org for "punch impact" — filter CC0. Typical setup:
+- 2–3 light punch variations (pitch them ±10% in AudioManager for variety)
+- 1 heavy thud
+- 1 crowd-reaction or bone-crack for KO

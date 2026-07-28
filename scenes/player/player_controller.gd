@@ -218,6 +218,14 @@ func _on_hitbox_area_entered(area: Area3D) -> void:
 	if target is CharacterBody3D:
 		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
 		(target as CharacterBody3D).velocity += dir * data.knockback
+	# Combat feel — hit-stop and sound on every landed hit
+	var is_heavy: bool = data.damage >= 20.0
+	if is_heavy:
+		CombatFeel.hit_heavy()
+		AudioManager.play_sfx("hit_heavy")
+	else:
+		CombatFeel.hit_light()
+		AudioManager.play_sfx("hit_light")
 	hit_landed.emit(target, current_attack_id, data.damage)
 
 # ── Receive damage ────────────────────────────────────────────────────────────
@@ -244,6 +252,8 @@ func _enter_hit_react(amount: float) -> void:
 	)
 
 func _enter_ko() -> void:
+	CombatFeel.hit_ko()
+	AudioManager.play_sfx("hit_ko")
 	combat_state = AttackConfig.CombatState.KO
 	attack_phase = AttackConfig.AttackPhase.NONE
 	_set_hitbox(false)
