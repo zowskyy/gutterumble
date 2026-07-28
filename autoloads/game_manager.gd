@@ -5,6 +5,7 @@ signal scene_changed(scene_path: String)
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu/main_menu.tscn"
 const CHARACTER_CREATOR_SCENE: String = "res://scenes/character_creator/character_creator.tscn"
 const RUMBLE_ARENA_BACK_ALLEY_SCENE: String = "res://scenes/arenas/back_alley/rumble_arena_back_alley.tscn"
+const RUMBLE_ARENA_ROOFTOP_SCENE: String = "res://scenes/arenas/rooftop/rumble_arena_rooftop.tscn"
 
 var current_scene_path: String = MAIN_MENU_SCENE
 
@@ -23,6 +24,9 @@ func go_to_character_creator() -> void:
 
 func go_to_rumble_arena_back_alley() -> void:
 	change_scene(RUMBLE_ARENA_BACK_ALLEY_SCENE)
+
+func go_to_rumble_arena_rooftop() -> void:
+	change_scene(RUMBLE_ARENA_ROOFTOP_SCENE)
 
 func change_scene(scene_path: String) -> void:
 	if scene_path.is_empty():

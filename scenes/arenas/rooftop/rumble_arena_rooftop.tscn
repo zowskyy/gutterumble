@@ -1,0 +1,271 @@
+[gd_scene load_steps=9 format=3 uid="uid://b7x2wq4n8kv3m"]
+
+; Reuses the back-alley arena's match-management script as-is — it has no
+; back-alley-specific coupling (all node lookups are generic paths any
+; correctly-structured arena scene provides: SpawnPoints/PlayerSpawn,
+; HUD/HUDRoot/*, Camera3D), so this is a genuine "arena match manager",
+; not a hardcoded one-off. Reusing it here avoids duplicating ~370 lines
+; of round/combo/special-meter/pool wiring for a scene that's otherwise
+; just different geometry and mood lighting.
+[ext_resource type="Script" path="res://scenes/arenas/back_alley/rumble_arena_back_alley.gd" id="1"]
+[ext_resource type="Environment" path="res://assets/environments/arena_rooftop.tres" id="3"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(16, 12)
+
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.08, 0.09, 0.11, 1)
+roughness = 0.85
+emission_enabled = true
+emission = Color(0.15, 0.18, 0.3, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(16, 0.2, 12)
+
+[sub_resource type="BoxShape3D" id="WallShapeZ"]
+size = Vector3(16, 2.4, 0.3)
+
+[sub_resource type="BoxShape3D" id="WallShapeX"]
+size = Vector3(0.3, 2.4, 12)
+
+[sub_resource type="BoxMesh" id="HvacMesh"]
+size = Vector3(1.4, 1.0, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hvac"]
+albedo_color = Color(0.25, 0.25, 0.27, 1)
+roughness = 0.7
+
+[node name="RumbleArenaRooftop" type="Node3D"]
+script = ExtResource("1")
+waves = [{"team": 1, "count": 2}, {"team": 1, "count": 3}, {"team": 1, "count": 4}]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("3")
+
+; Cool-toned "moonlight" — distinguishes the rooftop's night mood from the
+; back alley's neutral daylight-ish key light.
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.353, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 8, 0)
+light_color = Color(0.75, 0.8, 1.0, 1)
+light_energy = 0.6
+shadow_enabled = true
+
+[node name="AmbientLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+light_color = Color(0.6, 0.7, 1.0, 1)
+light_energy = 0.35
+omni_range = 18.0
+
+; arena_camera.gd is attached at runtime via set_script() in
+; rumble_arena_back_alley.gd's _ready() (matches the back-alley arena
+; exactly) — NOT attached here directly. set_script() on an already-in-tree
+; node does not re-trigger _ready(), so a direct attachment here would risk
+; arena_camera.gd's own _ready() (which sets _origin and _last_tick_usec)
+; never running.
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.766, 0.643, 0, -0.643, 0.766, 0, 6, 9)
+current = true
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("PlaneMesh_floor")
+surface_material_override/0 = SubResource("Mat_floor")
+
+[node name="FloorCollision" type="CollisionShape3D" parent="Floor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+shape = SubResource("BoxShape3D_floor")
+
+; Set dressing — rooftop HVAC units, no gameplay function
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Hvac1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.5, -4)
+mesh = SubResource("HvacMesh")
+surface_material_override/0 = SubResource("Mat_hvac")
+
+[node name="Hvac2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.5, 4)
+mesh = SubResource("HvacMesh")
+surface_material_override/0 = SubResource("Mat_hvac")
+
+[node name="SpawnPoints" type="Node3D" parent="."]
+
+[node name="PlayerSpawn" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+
+[node name="EnemySpawn" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 3, 0, 0)
+
+[node name="EnemySpawn2" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 4, 0, -2)
+
+[node name="EnemySpawn3" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 4, 0, 2)
+
+[node name="EnemySpawn4" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 0, -3.5)
+
+[node name="EnemySpawn5" type="Node3D" parent="SpawnPoints"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 0, 3.5)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="HUDRoot" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PlayerHealthBar" type="ProgressBar" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.02
+anchor_top = 0.04
+anchor_right = 0.38
+anchor_bottom = 0.04
+offset_bottom = 26.0
+value = 100.0
+show_percentage = false
+
+[node name="SpecialGaugeBar" type="ProgressBar" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.02
+anchor_top = 0.09
+anchor_right = 0.38
+anchor_bottom = 0.09
+offset_bottom = 14.0
+max_value = 100.0
+value = 0.0
+show_percentage = false
+modulate = Color(1.0, 0.85, 0.2, 1.0)
+
+[node name="EnemyHealthBar" type="ProgressBar" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.62
+anchor_top = 0.04
+anchor_right = 0.98
+anchor_bottom = 0.04
+offset_bottom = 26.0
+value = 100.0
+show_percentage = false
+
+[node name="EnemiesRemainingLabel" type="Label" parent="HUD/HUDRoot"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.62
+anchor_top = 0.04
+anchor_right = 0.98
+anchor_bottom = 0.04
+offset_bottom = 26.0
+text = "ENEMIES: 3"
+horizontal_alignment = 2
+
+[node name="WaveLabel" type="Label" parent="HUD/HUDRoot"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.62
+anchor_top = 0.145
+anchor_right = 0.98
+anchor_bottom = 0.145
+offset_bottom = 20.0
+text = "WAVE 1 / 3"
+horizontal_alignment = 2
+
+[node name="CountdownLabel" type="Label" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.38
+anchor_right = 0.5
+anchor_bottom = 0.38
+offset_left = -60.0
+offset_right = 60.0
+offset_bottom = 64.0
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RoundResultLabel" type="Label" parent="HUD/HUDRoot"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.45
+anchor_right = 0.5
+anchor_bottom = 0.45
+offset_left = -120.0
+offset_right = 120.0
+offset_bottom = 48.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RoundsLabel" type="Label" parent="HUD/HUDRoot"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.10
+anchor_bottom = 0.10
+offset_left = -120.0
+offset_right = 120.0
+offset_bottom = 28.0
+text = "○ ○   vs   ○ ○"
+horizontal_alignment = 1
+
+[node name="ComboLabel" type="Label" parent="HUD/HUDRoot"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.62
+anchor_bottom = 0.62
+offset_left = -160.0
+offset_right = 160.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 28
+text = "0 HIT COMBO!"
+horizontal_alignment = 1
+pivot_offset = Vector2(160, 20)
+
+; ── Arena boundary walls (parapet — invisible blockers, taller than back
+; alley's since a rooftop edge should read as more of a hard boundary) ────────
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="WallNorth" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallNorth"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -6.2)
+shape = SubResource("WallShapeZ")
+
+[node name="WallSouth" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallSouth"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 6.2)
+shape = SubResource("WallShapeZ")
+
+[node name="WallWest" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallWest"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.2, 1.2, 0)
+shape = SubResource("WallShapeX")
+
+[node name="WallEast" type="StaticBody3D" parent="Walls"]
+collision_layer = 2
+
+[node name="Shape" type="CollisionShape3D" parent="Walls/WallEast"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.2, 1.2, 0)
+shape = SubResource("WallShapeX")

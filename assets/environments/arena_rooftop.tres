@@ -1,0 +1,26 @@
+[gd_resource type="Environment" format=3 uid="uid://dqxr7m2kf9lh"]
+
+[sub_resource type="Sky" id="Sky_1"]
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_1")
+
+; Night rooftop — cooler, moodier than the back alley's neutral ambient
+ambient_light_source = 3
+ambient_light_color = Color(0.12, 0.14, 0.24, 1)
+ambient_light_energy = 0.35
+
+tonemap_mode = 2
+tonemap_exposure = 1.0
+tonemap_white = 6.0
+
+; Stronger glow than back_alley — city-lights-at-night read
+glow_enabled = true
+glow_levels/2 = 1.0
+glow_levels/3 = 1.0
+glow_levels/4 = 0.4
+glow_intensity = 0.9
+glow_strength = 1.1
+glow_bloom = 0.15
+glow_blend_mode = 2
