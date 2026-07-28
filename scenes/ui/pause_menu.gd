@@ -9,7 +9,11 @@ func _ready() -> void:
 	layer   = 20
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_just_pressed("ui_cancel"):
+	# is_action_just_pressed() is an Input-singleton POLLING method (for use
+	# in _process/_physics_process) — it doesn't exist on InputEvent itself.
+	# is_action_pressed() on the event is the correct per-event "just
+	# pressed" check here.
+	if event.is_action_pressed("ui_cancel"):
 		if visible:
 			_on_resume()
 		else:

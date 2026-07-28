@@ -48,8 +48,8 @@ func _process(delta: float) -> void:
 		_finisher_timer -= (now - _last_tick_usec) / 1_000_000.0
 		_last_tick_usec = now
 		var pos := _finisher_target.global_position
-		var target_pos := Vector3(pos.x, finisher_zoom_height, pos.z + finisher_zoom_dist)
-		position = position.lerp(target_pos, follow_speed * 1.5 * delta)
+		var finisher_pos := Vector3(pos.x, finisher_zoom_height, pos.z + finisher_zoom_dist)
+		position = position.lerp(finisher_pos, follow_speed * 1.5 * delta)
 		look_at(Vector3(pos.x, 1.0, pos.z), Vector3.UP)
 		CombatFeel._cam_origin = position
 		if _finisher_timer <= 0.0:
