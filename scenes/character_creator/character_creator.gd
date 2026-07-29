@@ -1,40 +1,11 @@
 extends Node3D
 # Character Creator — texture-slot customization.
 # Lets the player pick skin tone, outfit, hair, and a gang colour.
-# Applies changes live to the preview model and saves via SaveManager.
+# Option tables live in CustomizationManager (single source of truth shared
+# with the code that applies a saved appearance to the actual in-arena
+# fighter) — this script only owns UI state and the live preview.
 
 const MOUSE_SCENE := preload("res://assets/characters/mouse/mouse.glb")
-
-# Texture options per slot
-const SKIN_OPTIONS: Array[Dictionary] = [
-	{"label": "Dark",   "path": "res://assets/characters/mouse/mouse_young_darkskinned_male_diffuse.png"},
-]
-const HAIR_OPTIONS: Array[Dictionary] = [
-	{"label": "Afro",  "path": "res://assets/characters/mouse/mouse_afro_diffuse.png"},
-]
-const SHIRT_OPTIONS: Array[Dictionary] = [
-	{"label": "Hoodie",  "path": "res://assets/characters/mouse/mouse_hoodietex1.png", "unlock_wins": 0},
-	{"label": "Hoodie 2","path": "res://assets/characters/mouse/mouse_normalshoodie.png", "unlock_wins": 5},
-]
-const PANTS_OPTIONS: Array[Dictionary] = [
-	{"label": "Cargo",   "path": "res://assets/characters/mouse/mouse_cargo_pants_diff.png"},
-]
-const SHOE_OPTIONS: Array[Dictionary] = [
-	{"label": "Kicks",   "path": "res://assets/characters/mouse/mouse_shoes02_diffuse.png"},
-]
-# unlock_wins gates these behind SaveManager's win count rather than a
-# separate persisted "unlocked items" list — whether something's unlocked
-# is a pure function of wins, so there's nothing new to save/load/desync.
-# Skin/Pants/Shoes have exactly one option each (only one texture exists
-# per slot in the current asset set) so there's nothing to gate there yet.
-const GANG_COLORS: Array[Dictionary] = [
-	{"label": "Blue",   "color": Color(0.15, 0.45, 1.0), "unlock_wins": 0},
-	{"label": "Red",    "color": Color(1.0,  0.18, 0.18), "unlock_wins": 3},
-	{"label": "Green",  "color": Color(0.15, 0.85, 0.35), "unlock_wins": 6},
-	{"label": "Gold",   "color": Color(1.0,  0.70, 0.0), "unlock_wins": 10},
-	{"label": "Purple", "color": Color(0.65, 0.20, 0.90), "unlock_wins": 15},
-	{"label": "White",  "color": Color(0.95, 0.95, 0.95), "unlock_wins": 20},
-]
 
 var _appearance: Dictionary = {}
 var _preview_model: Node3D  = null
@@ -78,12 +49,13 @@ func _ready() -> void:
 	# file from before unlock gating existed, or one edited by hand. Index 0
 	# is always unlocked by convention (unlock_wins defaults to 0), so it's
 	# always a safe fallback.
-	if not _is_unlocked(SHIRT_OPTIONS, _shirt_idx):
+	if not _is_unlocked(CustomizationManager.SHIRT_OPTIONS, _shirt_idx):
 		_shirt_idx = 0
-	if not _is_unlocked(GANG_COLORS, _gang_idx):
+	if not _is_unlocked(CustomizationManager.GANG_COLORS, _gang_idx):
 		_gang_idx = 0
 
 	_refresh_labels()
+	_update_preview()
 
 	# Wire buttons
 	if _back_btn:
@@ -120,13 +92,14 @@ func _connect_arrow(path: String, cb: Callable) -> void:
 func _cycle(slot: String, dir: int) -> void:
 	AudioManager.play_sfx("ui_confirm")
 	match slot:
-		"skin":  _skin_idx  = wrapi(_skin_idx  + dir, 0, SKIN_OPTIONS.size())
-		"hair":  _hair_idx  = wrapi(_hair_idx  + dir, 0, HAIR_OPTIONS.size())
-		"shirt": _shirt_idx = _cycle_unlocked(SHIRT_OPTIONS, _shirt_idx, dir)
-		"pants": _pants_idx = wrapi(_pants_idx + dir, 0, PANTS_OPTIONS.size())
-		"shoe":  _shoe_idx  = wrapi(_shoe_idx  + dir, 0, SHOE_OPTIONS.size())
-		"gang":  _gang_idx  = _cycle_unlocked(GANG_COLORS, _gang_idx, dir)
+		"skin":  _skin_idx  = wrapi(_skin_idx  + dir, 0, CustomizationManager.SKIN_OPTIONS.size())
+		"hair":  _hair_idx  = wrapi(_hair_idx  + dir, 0, CustomizationManager.HAIR_OPTIONS.size())
+		"shirt": _shirt_idx = _cycle_unlocked(CustomizationManager.SHIRT_OPTIONS, _shirt_idx, dir)
+		"pants": _pants_idx = wrapi(_pants_idx + dir, 0, CustomizationManager.PANTS_OPTIONS.size())
+		"shoe":  _shoe_idx  = wrapi(_shoe_idx  + dir, 0, CustomizationManager.SHOE_OPTIONS.size())
+		"gang":  _gang_idx  = _cycle_unlocked(CustomizationManager.GANG_COLORS, _gang_idx, dir)
 	_refresh_labels()
+	_update_preview()
 
 # ── Unlocks ───────────────────────────────────────────────────────────────────
 
@@ -161,22 +134,36 @@ func _next_locked_hint(options: Array[Dictionary]) -> String:
 	return "Win %d more to unlock %s" % [best_req - wins, best_label]
 
 func _refresh_labels() -> void:
-	if _skin_lbl:  _skin_lbl.text  = SKIN_OPTIONS[_skin_idx].get("label", "")
-	if _hair_lbl:  _hair_lbl.text  = HAIR_OPTIONS[_hair_idx].get("label", "")
-	if _shirt_lbl: _shirt_lbl.text = SHIRT_OPTIONS[_shirt_idx].get("label", "")
-	if _pants_lbl: _pants_lbl.text = PANTS_OPTIONS[_pants_idx].get("label", "")
-	if _shoe_lbl:  _shoe_lbl.text  = SHOE_OPTIONS[_shoe_idx].get("label", "")
+	if _skin_lbl:  _skin_lbl.text  = CustomizationManager.SKIN_OPTIONS[_skin_idx].get("label", "")
+	if _hair_lbl:  _hair_lbl.text  = CustomizationManager.HAIR_OPTIONS[_hair_idx].get("label", "")
+	if _shirt_lbl: _shirt_lbl.text = CustomizationManager.SHIRT_OPTIONS[_shirt_idx].get("label", "")
+	if _pants_lbl: _pants_lbl.text = CustomizationManager.PANTS_OPTIONS[_pants_idx].get("label", "")
+	if _shoe_lbl:  _shoe_lbl.text  = CustomizationManager.SHOE_OPTIONS[_shoe_idx].get("label", "")
 	if _gang_lbl:
-		_gang_lbl.text = GANG_COLORS[_gang_idx].get("label", "")
+		_gang_lbl.text = CustomizationManager.GANG_COLORS[_gang_idx].get("label", "")
 	if _gang_swatch:
-		_gang_swatch.color = GANG_COLORS[_gang_idx].get("color", Color.WHITE)
+		_gang_swatch.color = CustomizationManager.GANG_COLORS[_gang_idx].get("color", Color.WHITE)
 	if _unlock_hint:
 		# Gang colors have more tiers than shirts, so they're more likely to
 		# have a next-unlock worth mentioning; shirts as a fallback.
-		var hint := _next_locked_hint(GANG_COLORS)
+		var hint := _next_locked_hint(CustomizationManager.GANG_COLORS)
 		if hint.is_empty():
-			hint = _next_locked_hint(SHIRT_OPTIONS)
+			hint = _next_locked_hint(CustomizationManager.SHIRT_OPTIONS)
 		_unlock_hint.text = hint
+
+# Applies the current in-progress selection to the live preview mesh —
+# previously the preview only ever showed the default glb textures; cycling
+# options changed the label text but never the actual 3D model.
+func _update_preview() -> void:
+	if not _preview_model:
+		return
+	CustomizationManager.apply_to_fighter(_preview_model, {
+		"skin_idx":  _skin_idx,
+		"hair_idx":  _hair_idx,
+		"shirt_idx": _shirt_idx,
+		"pants_idx": _pants_idx,
+		"shoe_idx":  _shoe_idx,
+	})
 
 func _on_save() -> void:
 	var data := {
@@ -186,7 +173,7 @@ func _on_save() -> void:
 		"pants_idx": _pants_idx,
 		"shoe_idx":  _shoe_idx,
 		"gang_idx":  _gang_idx,
-		"gang_color": GANG_COLORS[_gang_idx].get("color", Color.WHITE).to_html(),
+		"gang_color": CustomizationManager.GANG_COLORS[_gang_idx].get("color", Color.WHITE).to_html(),
 	}
 	SaveManager.save_appearance(data)
 	CustomizationManager.load_character_appearance({"appearance": data})

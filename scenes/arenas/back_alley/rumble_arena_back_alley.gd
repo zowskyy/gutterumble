@@ -139,7 +139,15 @@ func _spawn_warriors_mode() -> void:
 	if _hud_enemies_left: _hud_enemies_left.visible = true
 	if _hud_wave: _hud_wave.visible = true
 
-	_player = GangSpawner.spawn_player(_player_spawn)
+	# Use whatever gang color the player actually picked in the character
+	# creator instead of GangSpawner's hardcoded default blue — this was a
+	# dead-end before: the color picker had zero effect on gameplay.
+	var player_color: Color = GangSpawner.TEAM_COLORS[0]
+	var saved_color: String = SaveManager.load_appearance().get("gang_color", "")
+	if not saved_color.is_empty():
+		player_color = Color.html(saved_color)
+
+	_player = GangSpawner.spawn_player(_player_spawn, player_color)
 	if _player == null:
 		return
 	_player.set_physics_process(false)

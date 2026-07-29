@@ -56,6 +56,17 @@ func _ready() -> void:
 		_hitbox.area_entered.connect(_on_hitbox_area_entered)
 	_setup_trails()
 
+	# Apply whatever the player picked in the character creator. Runs once
+	# here since _ready() only fires when this pooled instance is first
+	# created (during FighterPool.preload_scene(), which always completes
+	# before GangSpawner.spawn_player() runs in the same arena _ready()) —
+	# material_override persists across pooled respawns, so no need to
+	# reapply on reset_for_respawn(). In Warriors mode, GangSpawner's own
+	# team-color pass runs after this and intentionally overrides clothing
+	# (not skin/hair) with a flat team color for crowd readability — skin
+	# tone and hairstyle customization stay visible in both modes.
+	CustomizationManager.apply_to_fighter(self, SaveManager.load_appearance())
+
 func _setup_trails() -> void:
 	var model := get_node_or_null("MouseModel")
 	if model == null:
