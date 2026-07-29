@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://gutterumble_main_menu"]
+[gd_scene load_steps=4 format=3 uid="uid://gutterumble_main_menu"]
 
 [ext_resource type="Script" path="res://scenes/main_menu/main_menu.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/main_menu/skeleton_mascot.gd" id="2"]
+[ext_resource type="SpriteFrames" path="res://assets/ui/skeleton_idle/skeleton_idle_frames.tres" id="3"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -85,3 +87,11 @@ offset_top = -36.0
 offset_right = 300.0
 offset_bottom = -10.0
 text = "W 0  |  L 0"
+
+[node name="SkeletonMascot" type="Node2D" parent="."]
+position = Vector2(1140, 600)
+script = ExtResource("2")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="SkeletonMascot"]
+sprite_frames = ExtResource("3")
+animation = &"idle"
