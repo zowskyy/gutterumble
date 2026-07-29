@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Batch configure Godot import settings for arena textures."""
+"""Print the Godot import settings each arena texture needs.
+
+Despite the filename, this does NOT write any .import files — Godot's
+.import format has internal fields (uid, dest_files hashes, etc.) that
+aren't safe to hand-author outside the editor. This prints a checklist for
+manual configuration via the Import dock instead. If a texture already has
+a correct .import file (most do, once configured once), Godot won't lose
+those settings — this script is only useful for a first-time setup pass on
+newly generated textures.
+"""
 
 import os
 import json
