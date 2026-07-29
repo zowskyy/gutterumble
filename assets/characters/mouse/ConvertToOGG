@@ -1,0 +1,90 @@
+import csv
+import subprocess
+from pathlib import Path
+
+ROOT = Path(r"C:\Users\mrscp\Desktop\gutterumble music\converterd")
+SOURCE = ROOT / "source_audio" / "library"
+OUTPUT = ROOT / "processed_audio" / "normalized"
+MANIFEST = ROOT / "manifests" / "sound_manifest.csv"
+
+AUDIO_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".aiff", ".aif", ".m4a"}
+
+DEFAULT_TARGETS = {
+    "ui": {"lufs": -16.0, "tp": -1.5},
+    "foley": {"lufs": -18.0, "tp": -1.5},
+    "impacts": {"lufs": -14.0, "tp": -1.5},
+    "ambience": {"lufs": -22.0, "tp": -2.0},
+    "weapons": {"lufs": -16.0, "tp": -1.5},
+    "magic": {"lufs": -16.0, "tp": -1.5},
+    "creatures": {"lufs": -18.0, "tp": -1.5},
+    "footsteps": {"lufs": -18.0, "tp": -1.5},
+    "vehicles": {"lufs": -18.0, "tp": -1.5},
+    "music_stings": {"lufs": -14.0, "tp": -1.5},
+}
+
+def run(cmd):
+    subprocess.run(cmd, check=True)
+
+def ffmpeg_loudnorm(infile: Path, outfile: Path, target_lufs: float, target_tp: float):
+    outfile.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(infile),
+        "-af", f"loudnorm=I={target_lufs}:TP={target_tp}:LRA=11:print_format=summary",
+        "-c:a", "pcm_s16le",
+        str(outfile)
+    ]
+    run(cmd)
+
+def infer_category(path: Path):
+    parts = [p.lower() for p in path.parts]
+    for cat in DEFAULT_TARGETS:
+        if cat in parts:
+            return cat
+    return "misc"
+
+def write_manifest(rows):
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    with MANIFEST.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "asset_id", "source_path", "final_path", "category", "tags",
+                "lufs_target", "true_peak_target", "review_status", "notes"
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+def main():
+    rows = []
+
+    for infile in SOURCE.rglob("*"):
+        if not infile.is_file() or infile.suffix.lower() not in AUDIO_EXTS:
+            continue
+
+        category = infer_category(infile)
+        targets = DEFAULT_TARGETS.get(category, {"lufs": -18.0, "tp": -1.5})
+
+        rel = infile.relative_to(SOURCE)
+        outfile = OUTPUT / rel.with_suffix(".wav")
+
+        ffmpeg_loudnorm(infile, outfile, targets["lufs"], targets["tp"])
+
+        asset_id = infile.stem.lower().replace(" ", "_")
+        rows.append({
+            "asset_id": asset_id,
+            "source_path": str(infile),
+            "final_path": str(outfile),
+            "category": category,
+            "tags": category,
+            "lufs_target": targets["lufs"],
+            "true_peak_target": targets["tp"],
+            "review_status": "auto",
+            "notes": ""
+        })
+
+    write_manifest(rows)
+
+if __name__ == "__main__":
+    main()

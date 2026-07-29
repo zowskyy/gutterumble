@@ -353,7 +353,7 @@ func _on_round_over(player_won: bool, player_score: int, enemy_score: int) -> vo
 
 func _on_match_over(player_won: bool) -> void:
 	match_state = MatchState.ENDED   # set synchronously so _on_round_over's
-	                                  # delayed check (above) reads it correctly
+									  # delayed check (above) reads it correctly
 	if player_won:
 		SaveManager.increment_stat("wins")
 	match_ended.emit(player_won)
