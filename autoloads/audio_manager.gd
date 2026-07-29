@@ -11,31 +11,38 @@ extends Node
 const SFX_POOL_SIZE := 8
 
 const SFX_PATHS: Dictionary = {
-	"hit_light":   "res://assets/audio/sfx/hit_light.ogg",
-	"hit_heavy":   "res://assets/audio/sfx/hit_heavy.ogg",
-	"hit_ko":      "res://assets/audio/sfx/hit_ko.ogg",
-	"dodge":       "res://assets/audio/sfx/dodge.ogg",
-	"ui_confirm":  "res://assets/audio/sfx/ui_confirm.ogg",
-	"ui_back":     "res://assets/audio/sfx/ui_back.ogg",
-	"countdown":   "res://assets/audio/sfx/countdown.ogg",
-	"fight_start": "res://assets/audio/sfx/fight_start.ogg",
-	"win":         "res://assets/audio/sfx/win.ogg",
-	"lose":        "res://assets/audio/sfx/lose.ogg",
+	"hit_light":   "res://assets/audio/sfx/hit_light.wav",
+	"hit_heavy":   "res://assets/audio/sfx/hit_heavy.wav",
+	"hit_ko":      "res://assets/audio/sfx/hit_ko.mp3",
+	"dodge":       "res://assets/audio/sfx/dodge.mp3",
+	"ui_confirm":  "res://assets/audio/sfx/ui_confirm.mp3",
+	# No distinct "back" sound generated yet — reusing ui_confirm rather than
+	# staying silent on every back-button press. Swap in a real file under
+	# the same name (res://assets/audio/sfx/ui_back.mp3) whenever one exists.
+	"ui_back":     "res://assets/audio/sfx/ui_confirm.mp3",
+	"countdown":   "res://assets/audio/sfx/countdown.mp3",
+	"fight_start": "res://assets/audio/sfx/fight_start.mp3",
+	"win":         "res://assets/audio/sfx/win.mp3",
+	"lose":        "res://assets/audio/sfx/lose.mp3",
+	# Not generated yet — stays silent (ResourceLoader.exists() check below
+	# handles this gracefully) until a file lands at this path.
 	"combo_milestone": "res://assets/audio/sfx/combo_milestone.ogg",
-	"special_activate": "res://assets/audio/sfx/special_activate.ogg",
+	"special_activate": "res://assets/audio/sfx/special_activate.mp3",
 }
 
 const MUSIC_PATHS: Dictionary = {
-	"arena_theme": "res://assets/audio/music/arena_theme.ogg",
-	"menu_theme":  "res://assets/audio/music/menu_theme.ogg",
+	"arena_theme": "res://assets/audio/music/arena_theme.mp3",
+	"menu_theme":  "res://assets/audio/music/menu_theme.mp3",
 }
 
 # Crowd barks — ambient taunts/grunts from fighters not currently in the thick
 # of it. Multiple variations so the same line doesn't repeat back-to-back.
 const BARK_PATHS: Array[String] = [
-	"res://assets/audio/sfx/barks/bark_01.ogg",
-	"res://assets/audio/sfx/barks/bark_02.ogg",
-	"res://assets/audio/sfx/barks/bark_03.ogg",
+	"res://assets/audio/sfx/barks/bark_01.mp3",
+	"res://assets/audio/sfx/barks/bark_02.mp3",
+	"res://assets/audio/sfx/barks/bark_03.mp3",
+	"res://assets/audio/sfx/barks/bark_04.mp3",
+	"res://assets/audio/sfx/barks/bark_05.mp3",
 ]
 const BARK_COOLDOWN_SECS := 4.0   # global — one bark at a time regardless of wave size
 
@@ -108,6 +115,13 @@ func play_music(key: String, _fade_time: float = 1.0) -> void:
 	var stream: AudioStream = load(path)
 	if stream == null:
 		return
+	# AudioStreamMP3.loop defaults to false — verified against Godot's class
+	# reference. Without this, background music plays once and stops instead
+	# of looping. (Only handling MP3 here since that's what's actually in
+	# use — if .ogg music is added later, verify AudioStreamOggVorbis's loop
+	# property name before assuming it matches.)
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
 	_music_player.stream = stream
 	_music_player.play()
 
