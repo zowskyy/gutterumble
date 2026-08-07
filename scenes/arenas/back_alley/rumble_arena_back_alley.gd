@@ -399,6 +399,14 @@ func _show_final_result(player_won: bool) -> void:
 	if _hud_result:
 		_hud_result.text    = "YOU WIN!" if player_won else "YOU LOSE!"
 		_hud_result.visible = true
+	var arena_name := "rooftop" if SaveManager.load_setting("selected_arena", "back_alley") == "rooftop" else "back_alley"
+	SupabaseManager.log_match("local_player", {
+		"arena": arena_name,
+		"warriors_mode": warriors_mode,
+		"player_won": player_won,
+		"player_wins": RoundManager.player_wins,
+		"enemy_wins": RoundManager.enemy_wins,
+	})
 	await get_tree().create_timer(ROUND_END_WAIT).timeout
 	_cleanup()
 	GameManager.go_to_main_menu()

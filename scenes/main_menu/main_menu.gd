@@ -28,8 +28,7 @@ func _update_stats() -> void:
 
 func _on_rumble() -> void:
 	AudioManager.play_sfx("ui_confirm")
-	SaveManager.save_setting("warriors_mode", false)
-	GameManager.go_to_rumble_arena_back_alley()
+	GameManager.go_to_arena_select()
 
 func _on_warriors() -> void:
 	AudioManager.play_sfx("ui_confirm")

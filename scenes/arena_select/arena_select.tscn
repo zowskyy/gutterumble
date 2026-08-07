@@ -1,0 +1,58 @@
+[gd_scene load_steps=2 format=3 uid="uid://gutterumble_arena_select"]
+
+[ext_resource type="Script" path="res://scenes/arena_select/arena_select.gd" id="1"]
+
+[node name="ArenaSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.043, 0.043, 0.055, 1)
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.2
+anchor_bottom = 0.2
+offset_left = -160.0
+offset_right = 160.0
+offset_bottom = 40.0
+text = "PICK YOUR ARENA"
+horizontal_alignment = 1
+
+[node name="ButtonContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.45
+anchor_right = 0.5
+anchor_bottom = 0.45
+offset_left = -130.0
+offset_top = -80.0
+offset_right = 130.0
+offset_bottom = 80.0
+theme_override_constants/separation = 12
+
+[node name="BackAlleyButton" type="Button" parent="ButtonContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 48)
+text = "BACK ALLEY"
+
+[node name="RooftopButton" type="Button" parent="ButtonContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 48)
+text = "ROOFTOP"
+
+[node name="BackButton" type="Button" parent="ButtonContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 44)
+text = "BACK"

@@ -4,6 +4,7 @@ signal scene_changed(scene_path: String)
 
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu/main_menu.tscn"
 const CHARACTER_CREATOR_SCENE: String = "res://scenes/character_creator/character_creator.tscn"
+const ARENA_SELECT_SCENE: String = "res://scenes/arena_select/arena_select.tscn"
 const RUMBLE_ARENA_BACK_ALLEY_SCENE: String = "res://scenes/arenas/back_alley/rumble_arena_back_alley.tscn"
 const RUMBLE_ARENA_ROOFTOP_SCENE: String = "res://scenes/arenas/rooftop/rumble_arena_rooftop.tscn"
 
@@ -21,6 +22,9 @@ func go_to_main_menu() -> void:
 
 func go_to_character_creator() -> void:
 	change_scene(CHARACTER_CREATOR_SCENE)
+
+func go_to_arena_select() -> void:
+	change_scene(ARENA_SELECT_SCENE)
 
 func go_to_rumble_arena_back_alley() -> void:
 	change_scene(RUMBLE_ARENA_BACK_ALLEY_SCENE)

@@ -2,7 +2,7 @@
 
 Street-fighting arena brawler built in **Godot 4.7** (Mobile/Android). Customize your fighter, pick a weapon, and battle AI opponents across urban arenas.
 
-**Status**: Main Menu ✅ · Character Creator ✅ · Back Alley Arena ✅ · Combat Core ⚠️ · Remaining Content ❌
+**Status**: Main Menu ✅ · Character Creator ✅ · Back Alley Arena ✅ · Rooftop Arena ✅ · Combat Core ✅ · Remaining Content ❌
 
 See [BUILD_GUIDE.md](BUILD_GUIDE.md) for the full slide-by-slice development roadmap (~15–20 playable hours target, 6 arenas, 5 weapon types).
 
@@ -34,7 +34,17 @@ Install Android SDK/NDK via Godot Editor → Export → Android, then configure 
 
 1. Open the project in Godot 4.7
 2. Press **F5** (main scene: `scenes/main_menu/main_menu.tscn`)
-3. Flow: Main Menu → Character Creator → Arena Select → Fight
+3. Flow: Main Menu → Arena Select → Fight (or Gang Wars for multi-wave rooftop)
+
+### Controls (1v1 / Gang Wars)
+
+| Key | Action |
+|-----|--------|
+| WASD / arrows | Move |
+| Z | Light attack |
+| X | Heavy attack |
+| Space | Dodge |
+| C | Special (when meter full) |
 
 ### Gate a file locally
 
@@ -49,7 +59,9 @@ bash scripts/gate-file.sh --file samples/hello_passing.py
 | Android APK | Godot → Project → Export → Android → Export Project |
 | Desktop (dev) | Godot → Export → Windows/Linux (configure preset) |
 
-Backend: Supabase integration scaffolded in `backend/` (player profiles, match logging) — see BUILD_GUIDE Phase 4.
+Backend: Supabase integration in `backend/` with automatic **local JSON fallback**
+(`user://gutterumble_local/`) when Supabase credentials are not configured. Match
+results are logged locally or to Supabase via `SupabaseManager.log_match()`.
 
 ## Build roadmap (summary)
 

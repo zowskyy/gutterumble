@@ -8,7 +8,21 @@ signal characters_loaded(data: Array)
 signal character_created(char_id: String)
 signal queued_for_match()
 
+var use_local_fallback: bool = false
+var _local_store: Node = null
+
+func _ready() -> void:
+	use_local_fallback = SUPABASE_URL.contains("your-project") or SUPABASE_ANON_KEY.contains("your-anon")
+	if use_local_fallback:
+		_local_store = preload("res://backend/local_profile_store.gd").new()
+		_local_store.name = "LocalProfileStore"
+		add_child(_local_store)
+		print("SupabaseManager: using local profile fallback (user://gutterumble_local/)")
+
 func get_characters(user_id: String) -> void:
+	if use_local_fallback and _local_store:
+		characters_loaded.emit(_local_store.get_characters(user_id))
+		return
 	if user_id.is_empty():
 		return
 	var http := _make_http()
@@ -16,6 +30,10 @@ func get_characters(user_id: String) -> void:
 	http.request(SUPABASE_URL + "/rest/v1/characters?user_id=eq." + user_id, API_HEADERS)
 
 func create_character(user_id: String, char_data: Dictionary) -> void:
+	if use_local_fallback and _local_store:
+		var char_id: String = _local_store.create_character(user_id, char_data)
+		character_created.emit(char_id)
+		return
 	if user_id.is_empty():
 		return
 	var http := _make_http()
@@ -25,6 +43,9 @@ func create_character(user_id: String, char_data: Dictionary) -> void:
 	http.request(SUPABASE_URL + "/rest/v1/characters", API_HEADERS, HTTPClient.METHOD_POST, JSON.stringify(body))
 
 func update_character(char_id: String, appearance: Array) -> void:
+	if use_local_fallback and _local_store:
+		_local_store.update_character(char_id, appearance)
+		return
 	if char_id.is_empty():
 		return
 	var http := _make_http()
@@ -36,7 +57,16 @@ func update_character(char_id: String, appearance: Array) -> void:
 		JSON.stringify({"appearance": appearance})
 	)
 
+func log_match(user_id: String, summary: Dictionary) -> void:
+	if use_local_fallback and _local_store:
+		_local_store.log_match(user_id, summary)
+		return
+
 func queue_for_match(user_id: String) -> void:
+	if use_local_fallback and _local_store:
+		if _local_store.queue_for_match(user_id):
+			queued_for_match.emit()
+		return
 	if user_id.is_empty():
 		return
 	var http := _make_http()
