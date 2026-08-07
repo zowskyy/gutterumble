@@ -9,3 +9,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
+.env
+.cursor/gate-logs/
+.cursor/gate-cache/
