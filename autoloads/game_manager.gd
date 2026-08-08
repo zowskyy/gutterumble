@@ -11,11 +11,32 @@ const RUMBLE_ARENA_ROOFTOP_SCENE: String = "res://scenes/arenas/rooftop/rumble_a
 var current_scene_path: String = MAIN_MENU_SCENE
 
 func _ready() -> void:
+	_assert_mobile_renderer()
+	_boot_warmup()
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
 	if tree.current_scene != null:
 		current_scene_path = tree.current_scene.scene_file_path
+
+func _assert_mobile_renderer() -> void:
+	var renderer: String = str(
+		ProjectSettings.get_setting("rendering/renderer/rendering_method", "")
+	)
+	if renderer != "mobile":
+		push_error(
+			"GUTTERUMBLE requires the mobile renderer; found '%s'. "
+			% renderer
+		)
+		return
+	print("GameManager: mobile renderer confirmed (%s)" % renderer)
+
+func _boot_warmup() -> void:
+	if not has_node("/root/ShaderWarmup"):
+		return
+	var warmup: Node = get_node("/root/ShaderWarmup")
+	if warmup.has_method("warmup_all"):
+		warmup.call_deferred("warmup_all")
 
 func go_to_main_menu() -> void:
 	change_scene(MAIN_MENU_SCENE)

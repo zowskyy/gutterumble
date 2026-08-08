@@ -62,6 +62,11 @@ func log_match(user_id: String, summary: Dictionary) -> void:
 		_local_store.log_match(user_id, summary)
 		return
 
+func record_match_result(payload: Dictionary) -> String:
+	if use_local_fallback and _local_store and _local_store.has_method("record_match_result"):
+		return _local_store.record_match_result(payload)
+	return ""
+
 func queue_for_match(user_id: String) -> void:
 	if use_local_fallback and _local_store:
 		if _local_store.queue_for_match(user_id):

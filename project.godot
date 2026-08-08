@@ -36,6 +36,9 @@ SaveManager="*res://autoloads/save_manager.gd"
 VFXPool="*res://autoloads/vfx_pool.gd"
 AnimationTreeBuilder="*res://autoloads/animation_tree_builder.gd"
 SpecialMeter="*res://autoloads/special_meter.gd"
+MatchResolver="*res://systems/match_resolver.gd"
+RepPipeline="*res://systems/rep_pipeline.gd"
+ShaderWarmup="*res://autoloads/shader_warmup.gd"
 
 [display]
 
