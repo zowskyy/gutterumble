@@ -1,7 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://gutterumble_mouse_enemy"]
+[gd_scene load_steps=8 format=3 uid="uid://gutterumble_mouse_enemy"]
 
 [ext_resource type="Script" path="res://scenes/enemies/enemy_ai.gd" id="1_ai"]
 [ext_resource type="PackedScene" uid="uid://dqogyum2gejlr" path="res://assets/characters/mouse/mouse.glb" id="2_glb"]
+[ext_resource type="Script" path="res://scenes/combat/hitbox.gd" id="3_hitbox"]
+[ext_resource type="Script" path="res://scenes/combat/hurtbox.gd" id="4_hurtbox"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.35
@@ -31,6 +33,7 @@ collision_layer = 2
 collision_mask = 4
 monitoring = false
 monitorable = false
+script = ExtResource("3_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.85)
@@ -42,6 +45,7 @@ collision_layer = 4
 collision_mask = 0
 monitoring = false
 monitorable = true
+script = ExtResource("4_hurtbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://gutterumble_test_hit_registration"]
+
+[ext_resource type="Script" path="res://scenes/test/test_hit_registration.gd" id="1"]
+
+[node name="TestHitRegistration" type="Node3D"]
+script = ExtResource("1")

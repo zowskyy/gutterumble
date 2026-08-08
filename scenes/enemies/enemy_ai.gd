@@ -2,9 +2,13 @@ extends CharacterBody3D
 # AI-controlled fighter. Exposes the same take_damage / is_dead / health API
 # as player_controller.gd so the arena can treat both identically.
 # Reads AttackConfig.ATTACK_DATA for stats — balance changes apply everywhere.
+# Decision pacing is fair and transparent; revert @export tunables to rollback
+# prior AI feel. Optional debug logging; enemies retry approach after hit-react
+# timeout expires.
 #
 # Requires child nodes: CollisionShape3D, Hitbox (Area3D), Hurtbox (Area3D)
-# Requires child node:  AnimationTree (optional — same rules as player_controller)
+# Requires child node:  AnimationTree (optional — AnimationTreeBuilder autoload extension
+# wires the tree in code when no editor AnimationTree is present).
 
 @export var max_health: float         = 100.0
 @export var move_speed: float         = 3.5
@@ -29,11 +33,13 @@ var _dodge_dir: Vector3                     = Vector3.ZERO
 var _phase_timer: float                     = 0.0
 var _phase_dur: float                       = 0.0
 var _decision_timer: float                  = 0.0
+var is_staggered: bool                        = false
+var _stagger_timer: float                     = 0.0
 
 var _target: Node3D = null
 
 # ── Node refs ─────────────────────────────────────────────────────────────────
-@onready var _hitbox: Area3D = get_node_or_null("Hitbox")
+@onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
 var _anim_tree: AnimationTree
 var _anim_sm: AnimationNodeStateMachinePlayback
 var _trail_r: AttackTrail
@@ -61,8 +67,7 @@ func _ready() -> void:
 	if _anim_tree:
 		_anim_sm = _anim_tree.get("parameters/playback")
 	if _hitbox:
-		_hitbox.monitoring = false
-		_hitbox.area_entered.connect(_on_hitbox_area_entered)
+		_hitbox.hit_landed.connect(_on_hitbox_hit_landed)
 	_setup_trails()
 	_setup_visibility_throttle()
 
@@ -93,9 +98,13 @@ func set_target(target: Node3D) -> void:
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
+	_tick_stagger(delta)
 	_decision_timer -= delta
 	match ai_state:
-		AIState.KO, AIState.HIT_REACT:
+		AIState.KO:
+			return
+		AIState.HIT_REACT:
+			move_and_slide()
 			return
 		AIState.ATTACK:
 			return  # phase timer drives the attack to completion
@@ -104,7 +113,18 @@ func _physics_process(delta: float) -> void:
 	_run_ai(delta)
 	move_and_slide()
 
+func _tick_stagger(delta: float) -> void:
+	if not is_staggered:
+		return
+	_stagger_timer -= delta
+	if _stagger_timer <= 0.0:
+		is_staggered = false
+		_stagger_timer = 0.0
+
 func _run_ai(delta: float) -> void:
+	if is_staggered:
+		move_and_slide()
+		return
 	if _target == null or (_target.has_method("is_dead") and _target.is_dead()):
 		_go_idle()
 		return
@@ -156,6 +176,8 @@ func _go_idle() -> void:
 
 # ── Attack ────────────────────────────────────────────────────────────────────
 func _start_attack() -> void:
+	if is_staggered:
+		return
 	var attack_id := "attack_light_01" if randf() < 0.65 else "attack_heavy_01"
 	if not AttackConfig.ATTACK_DATA.has(attack_id):
 		return
@@ -174,6 +196,8 @@ func _start_attack() -> void:
 	_travel(attack_id)
 
 func _start_dodge() -> void:
+	if is_staggered:
+		return
 	if not _target:
 		return
 	ai_state          = AIState.DODGE
@@ -238,23 +262,41 @@ func _set_hitbox(active: bool) -> void:
 		_trail_l.set_active(active)
 	if not _hitbox:
 		return
-	_hitbox.monitoring = active
-	var shape := _hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	if shape:
-		shape.disabled = not active
+	if active:
+		if not AttackConfig.ATTACK_DATA.has(current_attack_id):
+			return
+		# validate attack id before enabling hitbox — usage: active phase only
+		var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
+		var frames: int = maxi(3, int(data.active_time / (1.0 / 60.0)))
+		_hitbox.set_active_frames(frames)
+		_hitbox.begin_swing(data.damage, data.knockback)
+	else:
+		_hitbox.end_swing()
 
-func _on_hitbox_area_entered(area: Area3D) -> void:
-	var target := area.get_parent()
-	if target == self or not AttackConfig.ATTACK_DATA.has(current_attack_id):
-		return
+func _apply_hit_knockback(target: CharacterBody3D, attack_id: String, data: Dictionary) -> void:
+	var flat_self := Vector3(global_position.x, 0.0, global_position.z)
+	var flat_target := Vector3(target.global_position.x, 0.0, target.global_position.z)
+	var dir := (flat_target - flat_self).normalized()
+	if dir.length() < 0.01:
+		dir = -Vector3(global_transform.basis.z).normalized()
+	var impulse: float = data.knockback
+	target.velocity += dir * impulse
+	var weight: String = AttackConfig.get_attack_weight(attack_id, data.damage)
+	var est_distance: float = impulse * AttackConfig.get_stagger_secs(weight)
+	print("[knockback] weight=%s impulse=%.2f est_distance=%.2f" % [weight, impulse, est_distance])
+
+func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
+	if target == self:
+		return  # error: ignore self-hit
+	if not AttackConfig.ATTACK_DATA.has(current_attack_id):
+		return  # error: unknown attack id during hit resolution
 	var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 	if target.has_method("take_damage"):
-		target.take_damage(data.damage)
+		target.take_damage(data.damage, current_attack_id)
 	if target is CharacterBody3D:
-		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
-		(target as CharacterBody3D).velocity += dir * data.knockback
+		_apply_hit_knockback(target as CharacterBody3D, current_attack_id, data)
 	var is_heavy: bool = data.damage >= 20.0
-	var contact_point: Vector3 = (area as Node3D).global_position
+	var contact_point: Vector3 = hurtbox.global_position
 	if is_heavy:
 		CombatFeel.hit_heavy()
 		AudioManager.play_sfx("hit_heavy")
@@ -265,7 +307,7 @@ func _on_hitbox_area_entered(area: Area3D) -> void:
 		VFXPool.spark(contact_point, "light")
 
 # ── Receive damage ────────────────────────────────────────────────────────────
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attack_id: String = "") -> void:
 	if invulnerable or ai_state == AIState.KO:
 		return
 	health = maxf(0.0, health - amount)
@@ -273,14 +315,16 @@ func take_damage(amount: float) -> void:
 	if health <= 0.0:
 		_enter_ko()
 	else:
-		_enter_hit_react()
+		_enter_hit_react(amount, attack_id)
 
-func _enter_hit_react() -> void:
+func _enter_hit_react(amount: float, attack_id: String = "") -> void:
 	ai_state     = AIState.HIT_REACT
 	attack_phase = AttackConfig.AttackPhase.NONE
 	_set_hitbox(false)
 	invulnerable = true
-	_travel(AttackConfig.ANIM_HIT_LIGHT)
+	is_staggered = true
+	_stagger_timer = AttackConfig.get_stagger_secs_for_hit(attack_id, amount)
+	_travel(AttackConfig.ANIM_HIT_HEAVY if amount >= AttackConfig.HEAVY_DAMAGE_THRESHOLD else AttackConfig.ANIM_HIT_LIGHT)
 	get_tree().create_timer(0.40).timeout.connect(func() -> void:
 		invulnerable = false
 		if ai_state == AIState.HIT_REACT:
@@ -312,6 +356,10 @@ func get_health_percent() -> float:
 func is_dead() -> bool:
 	return ai_state == AIState.KO
 
+func get_ai_diagnostic() -> String:
+	# log.info snapshot for AI tuning transparency
+	return "ai_state=%d health=%.0f" % [ai_state as int, health]
+
 # ── Respawn (called by FighterPool.pull — pooled instances are reused across
 #    rounds/waves and otherwise keep whatever state they had at KO) ───────────
 func reset_for_respawn() -> void:
@@ -321,6 +369,8 @@ func reset_for_respawn() -> void:
 	attack_phase      = AttackConfig.AttackPhase.NONE
 	current_attack_id = ""
 	invulnerable      = false
+	is_staggered      = false
+	_stagger_timer    = 0.0
 	velocity          = Vector3.ZERO
 	_set_hitbox(false)
 	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)

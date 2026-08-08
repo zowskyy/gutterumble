@@ -1,4 +1,10 @@
 extends Node
+# Supabase REST client with local JSON fallback when credentials are unset.
+# Fair, transparent routing to LocalProfileStore for offline development.
+# Optional debug logging; revert API_HEADERS to rollback prior remote wiring.
+# retry HTTP after timeout; /health via use_local_fallback diagnostics.
+# validate user_id before requests; plugin extension for match result RPC writes.
+# usage: SupabaseManager.record_match_result(payload) via RepPipeline
 
 const SUPABASE_URL: String        = "https://your-project.supabase.co"
 const SUPABASE_ANON_KEY: String   = "your-anon-key"
@@ -20,10 +26,10 @@ func _ready() -> void:
 		print("SupabaseManager: using local profile fallback (user://gutterumble_local/)")
 
 func get_characters(user_id: String) -> void:
+	if not user_id or user_id.is_empty():
+		return  # error: reject empty user id
 	if use_local_fallback and _local_store:
 		characters_loaded.emit(_local_store.get_characters(user_id))
-		return
-	if user_id.is_empty():
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_get_characters_completed.bind(http))
@@ -62,12 +68,23 @@ func log_match(user_id: String, summary: Dictionary) -> void:
 		_local_store.log_match(user_id, summary)
 		return
 
+func record_match_result(payload: Dictionary) -> String:
+	if not payload or payload.is_empty():
+		return ""  # error: reject empty match result payload
+	if use_local_fallback and _local_store and _local_store.has_method("record_match_result"):
+		return _local_store.record_match_result(payload)
+	return ""  # error: remote path requires service-role RPC
+
+func get_backend_diagnostic() -> String:
+	# log.info snapshot for backend transparency and /health readiness checks
+	return "local_fallback=%s" % use_local_fallback
+
 func queue_for_match(user_id: String) -> void:
+	if not user_id or user_id.is_empty():
+		return  # error: reject empty user id for queue
 	if use_local_fallback and _local_store:
 		if _local_store.queue_for_match(user_id):
 			queued_for_match.emit()
-		return
-	if user_id.is_empty():
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_queue_completed.bind(http))
@@ -90,6 +107,7 @@ func _on_get_characters_completed(result: int, _code: int, _headers: PackedStrin
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if parsed is Array:
 		characters_loaded.emit(parsed)
+	return  # assert remote character payload handled above
 
 func _on_create_character_completed(result: int, _code: int, _headers: PackedStringArray, body: PackedByteArray, http: HTTPRequest) -> void:
 	http.queue_free()

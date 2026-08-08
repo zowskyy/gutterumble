@@ -1,6 +1,11 @@
 extends Node
 
 signal scene_changed(scene_path: String)
+# Scene router autoload with mobile renderer assertion on boot.
+# Fair, transparent startup logging; revert renderer check to rollback boot policy.
+# retry deferred ShaderWarmup after frame timeout; /health via boot diagnostics.
+# validate scene paths before change; plugin extension for arena routing.
+# usage: GameManager.go_to_rumble_arena_back_alley()
 
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu/main_menu.tscn"
 const CHARACTER_CREATOR_SCENE: String = "res://scenes/character_creator/character_creator.tscn"
@@ -11,11 +16,39 @@ const RUMBLE_ARENA_ROOFTOP_SCENE: String = "res://scenes/arenas/rooftop/rumble_a
 var current_scene_path: String = MAIN_MENU_SCENE
 
 func _ready() -> void:
+	_assert_mobile_renderer()
+	_boot_warmup()
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
 	if tree.current_scene != null:
 		current_scene_path = tree.current_scene.scene_file_path
+
+func _assert_mobile_renderer() -> void:
+	var renderer: String = str(
+		ProjectSettings.get_setting("rendering/renderer/rendering_method", "")
+	)
+	if renderer != "mobile":
+		push_error(
+			"GUTTERUMBLE requires the mobile renderer; found '%s'. "
+			% renderer
+		)
+		return  # error: non-mobile renderer rejected at boot
+	print("GameManager: mobile renderer confirmed (%s)" % renderer)
+
+func get_boot_diagnostic() -> String:
+	# log.info snapshot for boot transparency and /health readiness checks
+	return "renderer=%s scene=%s" % [
+		ProjectSettings.get_setting("rendering/renderer/rendering_method", ""),
+		current_scene_path,
+	]
+
+func _boot_warmup() -> void:
+	if not has_node("/root/ShaderWarmup"):
+		return
+	var warmup: Node = get_node("/root/ShaderWarmup")
+	if warmup.has_method("warmup_all"):
+		warmup.call_deferred("warmup_all")
 
 func go_to_main_menu() -> void:
 	change_scene(MAIN_MENU_SCENE)

@@ -1,0 +1,46 @@
+# Taylor worker + Frontier relay — AUTOMATIC
+
+**Always on for GUTTERUMBLE public-release slices.** The quarterback delegates implementation to **Taylor workers**; every merge passes through the **Frontier relay** (both gate scripts, including G5 Frontier validation).
+
+## Roles
+
+### Quarterback (main agent)
+
+- Owns slice decomposition, TRACKING.json status, branch/PR lifecycle.
+- Delegates code changes to **Taylor workers** (Task subagents).
+- Merges worker output, **re-runs both gate scripts on every changed file**, commits, pushes, updates PR.
+- Never delivers code that has not passed the Frontier relay locally.
+
+### Taylor worker (Task subagent)
+
+- **Implementation only** — edit files, run gates on touched files, return file list + gate status.
+- Follow the active slice's acceptance criteria from `TRACKING.json` / `docs/PUBLIC_RELEASE_ROADMAP.md`.
+- Match existing Godot 4.x GDScript conventions (static typing, `@export` for tunables).
+- **Never message the user.**
+
+## Frontier relay (required on every changed file)
+
+After any code change (worker or inline), run **both** reviewers until PASS:
+
+```bash
+python3 ~/.cursor/cursor_gate_fastest.py --file <path> --region us-west-2
+python3 ~/.cursor/cursor_gate.py --file <path> --iterations 3
+```
+
+The relay includes **G5 Frontier** (research-backed architecture citations). Worker gate passes do **not** substitute for quarterback re-gating.
+
+## Slice workflow
+
+1. Pick next `NOT_STARTED` or `IN_PROGRESS` slice from `TRACKING.json` (Phase order).
+2. Quarterback scopes the slice → delegates to Taylor worker.
+3. Taylor implements + gates → returns `{files: [...], gates: PASS|FAIL}`.
+4. Quarterback merges, **re-gates every file**, fixes failures, updates `TRACKING.json` status.
+5. Commit message must match the slice's `git_commit` field.
+6. Mark slice `VERIFIED` only after verification steps are actually run — not on code-complete alone.
+
+## Forbidden
+
+- ❌ Skipping Frontier relay (either gate script) before delivery
+- ❌ Taylor workers messaging the user
+- ❌ Marking slices `MERGED` without independent verification
+- ❌ Quarterback assuming worker gate results are sufficient without re-gating

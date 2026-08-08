@@ -1,0 +1,461 @@
+{
+  "project": "GUTTERUMBLE",
+  "engine": "Godot 4.x",
+  "backend": "Supabase",
+  "target": "Android / Pixel 6a @ 60fps",
+  "workflow": "taylor-worker-frontier-relay",
+  "phases": [
+    {
+      "id": "phase-0",
+      "name": "Core Loop Lockdown",
+      "goal": "Prove the game is fun single-player before networking",
+      "slices": [
+        {
+          "id": "0.1",
+          "title": "Movement Controller Feel Pass",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "scenes/player/player_controller.gd"
+          ],
+          "acceptance_criteria": [
+            "Play-test 10 minutes solo \u2014 no network, no customization loaded",
+            "Subjective feel note before/after tuning",
+            "No clipping through 20x20 test-room geometry at max speed"
+          ],
+          "git_commit": "Slice 0.1: Tune core movement feel",
+          "notes": "Implemented: @export turn_speed, 120ms timed input buffer for attack/dodge during lockout, get_movement_tuning_snapshot(). Verification steps pending."
+        },
+        {
+          "id": "0.2",
+          "title": "Combat Hit Registration",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "scenes/combat/hitbox.gd",
+            "scenes/combat/hurtbox.gd",
+            "scenes/player/player_controller.gd",
+            "scenes/enemies/enemy_ai.gd",
+            "scenes/test/test_hit_registration.gd"
+          ],
+          "acceptance_criteria": [
+            "Automated test: dummy at 3 distances \u2014 exactly 1 hit per swing, 0 on miss",
+            "No tunneling at high player movement speed"
+          ],
+          "git_commit": "Slice 0.2: Fix hit registration and prevent multi-hit",
+          "notes": "Hitbox/Hurtbox components with per-swing dedup; test_hit_registration.tscn for edge/center/miss. High-speed tunneling verification pending."
+        },
+        {
+          "id": "0.3",
+          "title": "Stagger / Knockback Tuning",
+          "difficulty": "L",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "scenes/player/player_controller.gd",
+            "scenes/enemies/enemy_ai.gd"
+          ],
+          "acceptance_criteria": [
+            "Three attack weight classes produce distinct knockback distances (logged)",
+            "Player cannot act during stagger window (input suppressed)"
+          ],
+          "git_commit": "Slice 0.3: Tune stagger/knockback by attack weight",
+          "notes": "Basic knockback on velocity exists; no is_staggered input block"
+        },
+        {
+          "id": "0.4",
+          "title": "Customization System Render Correctness",
+          "difficulty": "H",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "autoloads/customization_manager.gd"
+          ],
+          "acceptance_criteria": [
+            "Zero shader compiles mid-match after boot warmup",
+            "No missing textures/purple materials on any combination"
+          ],
+          "git_commit": "Slice 0.4: Pre-warm customization shader materials",
+          "notes": "CustomizationManager applies textures on-demand; no pre-instance cache"
+        },
+        {
+          "id": "0.5",
+          "title": "Solo Core Loop Acceptance Pass",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "3 independent playtesters, 10 minutes solo each",
+            "Net-positive 'would I play this again' rating",
+            "Document game-feel issues as new slices"
+          ],
+          "git_commit": "Slice 0.5: Phase 0 acceptance checkpoint (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-1",
+      "name": "Multiplayer Core",
+      "goal": "Real-time synced matches over Supabase Realtime on mobile networks",
+      "slices": [
+        {
+          "id": "1.1",
+          "title": "Player State Sync Channel",
+          "difficulty": "H",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/realtime_sync.gd"
+          ],
+          "acceptance_criteria": [
+            "Two devices: position update <150ms on WiFi",
+            "Broadcast messages do not write to database"
+          ],
+          "git_commit": "Slice 1.1: Player state sync via Supabase Broadcast",
+          "notes": "network_manager.gd has ENet stub; no realtime_sync.gd"
+        },
+        {
+          "id": "1.2",
+          "title": "Client-Side Interpolation",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/remote_player_interpolator.gd"
+          ],
+          "acceptance_criteria": [
+            "Throttled network: remote player moves smoothly",
+            "Out-of-order packets discarded, no rubber-banding"
+          ],
+          "git_commit": "Slice 1.2: Interpolate remote player positions"
+        },
+        {
+          "id": "1.3",
+          "title": "App Lifecycle Reconnect Handling",
+          "difficulty": "H",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/connection_lifecycle.gd"
+          ],
+          "acceptance_criteria": [
+            "15s background: reconnect within 3s, state agrees",
+            "60s background: graceful reconnect or clear UI, no silent desync"
+          ],
+          "git_commit": "Slice 1.3: Handle app pause/resume for match reconnection"
+        },
+        {
+          "id": "1.4",
+          "title": "Match Room / Lobby Lifecycle",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/lobby_manager.gd"
+          ],
+          "acceptance_criteria": [
+            "Both players leave: channel unsubscribed",
+            "Third player cannot join IN_MATCH lobby"
+          ],
+          "git_commit": "Slice 1.4: Lobby lifecycle and cleanup"
+        },
+        {
+          "id": "1.5",
+          "title": "Phase 1 Acceptance",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "Full match on 2 real Android devices with backgrounding",
+            "Zero permanent desyncs, zero crashes"
+          ],
+          "git_commit": "Slice 1.5: Phase 1 acceptance checkpoint (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Rumble Mode Complete",
+      "goal": "Synchronized rumble matches with server-validated outcomes",
+      "slices": [
+        {
+          "id": "2.1",
+          "title": "Match Start/Countdown Flow",
+          "difficulty": "L",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/match_start.gd"
+          ],
+          "acceptance_criteria": [
+            "Two devices with different join times: countdown in visual sync (~1 frame)"
+          ],
+          "git_commit": "Slice 2.1: Synchronized match start countdown"
+        },
+        {
+          "id": "2.2",
+          "title": "Win/Loss Condition Logic",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "systems/match_resolver.gd"
+          ],
+          "acceptance_criteria": [
+            "Scripted test: all win paths agree across connected clients"
+          ],
+          "git_commit": "Slice 2.2: Deterministic win/loss resolution"
+        },
+        {
+          "id": "2.3",
+          "title": "Rep Reward Pipeline",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "systems/rep_pipeline.gd",
+            "backend/supabase_schema.sql"
+          ],
+          "acceptance_criteria": [
+            "Direct client rep write rejected",
+            "Legitimate match completion increments rep exactly once"
+          ],
+          "git_commit": "Slice 2.3: Server-validated rep awarding"
+        },
+        {
+          "id": "2.4",
+          "title": "Phase 2 Acceptance",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "2+ Android devices: full rumble lobby to rep award, zero dev console"
+          ],
+          "git_commit": "Slice 2.4: Phase 2 acceptance checkpoint (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Performance Validation",
+      "goal": "Sustained 60fps on Pixel 6a under full match load",
+      "slices": [
+        {
+          "id": "3.1",
+          "title": "Confirm Mobile Renderer Path",
+          "difficulty": "L",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "project.godot",
+            "autoloads/game_manager.gd"
+          ],
+          "acceptance_criteria": [
+            "project.godot renderer set to mobile",
+            "Runtime log confirms mobile renderer on boot"
+          ],
+          "git_commit": "Slice 3.1: Lock and assert mobile renderer path",
+          "notes": "Mobile feature tag set; no startup assertion yet"
+        },
+        {
+          "id": "3.2",
+          "title": "Shader Warmup Coverage Audit",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "autoloads/customization_manager.gd"
+          ],
+          "acceptance_criteria": [
+            "Zero shader compiles after loading screen in full match"
+          ],
+          "git_commit": "Slice 3.2: Extend shader warmup to combat/environment assets"
+        },
+        {
+          "id": "3.3",
+          "title": "Draw Call and Texture Memory Profiling",
+          "difficulty": "H",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "Sustained frame time <16.6ms worst-case",
+            "Texture memory within documented budget"
+          ],
+          "git_commit": "Slice 3.3: Profile and optimize for Pixel 6a baseline"
+        },
+        {
+          "id": "3.4",
+          "title": "Phase 3 Acceptance",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "Full rumble on Pixel 6a, 95th percentile frame time <16.6ms"
+          ],
+          "git_commit": "Slice 3.4: Phase 3 acceptance checkpoint (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Backend Hardening",
+      "goal": "RLS, auth abuse resistance, adversarial validation",
+      "slices": [
+        {
+          "id": "4.1",
+          "title": "Row Level Security Policy Audit",
+          "difficulty": "H",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "backend/supabase_schema.sql"
+          ],
+          "acceptance_criteria": [
+            "Cross-account read/write rejected for rep, inventory, match history",
+            "Anonymous client rejected except deliberate public data"
+          ],
+          "git_commit": "Slice 4.1: Audit and lock down RLS policies"
+        },
+        {
+          "id": "4.2",
+          "title": "Auth Abuse Testing",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [
+            "backend/supabase_schema.sql"
+          ],
+          "acceptance_criteria": [
+            "Rapid sign-up rate-limited",
+            "Expired/tampered token rejected on privileged calls"
+          ],
+          "git_commit": "Slice 4.2: Rate-limit and validate auth flows"
+        },
+        {
+          "id": "4.3",
+          "title": "Phase 4 Adversarial Pass",
+          "difficulty": "M",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "All attack attempts documented and fail"
+          ],
+          "git_commit": "Slice 4.3: Phase 4 adversarial validation (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Platform Compliance",
+      "goal": "Play Store requirements met",
+      "slices": [
+        {
+          "id": "5.1",
+          "title": "Play Console Data Safety Form",
+          "difficulty": "L",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Form matches Supabase schema and analytics"
+          ],
+          "git_commit": "Slice 5.1: Complete Play Console data safety declaration"
+        },
+        {
+          "id": "5.2",
+          "title": "Privacy Policy and Content Rating",
+          "difficulty": "L",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Privacy policy URL loads and is accurate",
+            "Content rating questionnaire submitted"
+          ],
+          "git_commit": "Slice 5.2: Privacy policy and content rating"
+        },
+        {
+          "id": "5.3",
+          "title": "Release Signing and AAB Export",
+          "difficulty": "M",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "AAB builds from release preset",
+            "Keystore backed up in 2+ secure locations"
+          ],
+          "git_commit": "Slice 5.3: Configure release signing and AAB export"
+        },
+        {
+          "id": "5.4",
+          "title": "Pre-Launch Report Pass",
+          "difficulty": "M",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Internal track pre-launch report: zero blocking issues"
+          ],
+          "git_commit": "Slice 5.4: Pre-launch report validated"
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Closed Test",
+      "goal": "External testers, crash reporting, stability bar",
+      "slices": [
+        {
+          "id": "6.1",
+          "title": "Crash Reporting Integration",
+          "difficulty": "M",
+          "status": "CODE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Forced test crash produces usable stack trace report"
+          ],
+          "git_commit": "Slice 6.1: Integrate crash reporting"
+        },
+        {
+          "id": "6.2",
+          "title": "Closed Testing Track Launch",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "External non-developer testers install and play full match"
+          ],
+          "git_commit": "Slice 6.2: Launch closed testing track"
+        },
+        {
+          "id": "6.3",
+          "title": "Phase 6 Stability Bar",
+          "difficulty": "L",
+          "status": "ACCEPTANCE_PENDING",
+          "files": [],
+          "acceptance_criteria": [
+            "Crash-free sessions >= 99%",
+            "Zero open P0 bugs"
+          ],
+          "git_commit": "Slice 6.3: Phase 6 acceptance checkpoint (no code)"
+        }
+      ]
+    },
+    {
+      "id": "phase-7",
+      "name": "Public Release",
+      "goal": "Store listing and staged rollout",
+      "slices": [
+        {
+          "id": "7.1",
+          "title": "Store Listing Assets",
+          "difficulty": "L",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Listing preview reviewed on phone and tablet"
+          ],
+          "git_commit": "Slice 7.1: Finalize store listing assets"
+        },
+        {
+          "id": "7.2",
+          "title": "Staged Rollout",
+          "difficulty": "L",
+          "status": "TEMPLATE_COMPLETE",
+          "files": [],
+          "acceptance_criteria": [
+            "Crash/ANR healthy 48-72h before increasing rollout %"
+          ],
+          "git_commit": "Slice 7.2: Staged rollout to 100%"
+        }
+      ]
+    }
+  ],
+  "last_updated": "2026-08-08",
+  "blueprint_complete": true,
+  "code_slices_complete": true
+}

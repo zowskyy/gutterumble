@@ -51,4 +51,9 @@ When writing or changing code, run both gate reviewers and fix until PASS:
   python3 ~/.cursor/cursor_gate.py --file <path> --iterations 3
 
 Loop write → gate → fix until both return "status": "PASS". Only stop if BLOCKED with a specific ask. Never hand me unfixed gate failures when I can still fix them.
+
+Before substantive technical claims (API behavior, latency, platform requirements, security):
+  1. Check docs/CITATION_MAP.md in the repo
+  2. Web search if stale or missing; update the map
+  3. Prefer official docs (Godot, Supabase, Google Play) over blog posts
 ```
