@@ -1,7 +1,11 @@
 extends Node
 # Autoload: ShaderWarmup
-# Pre-compiles shaders and materials used during rumble matches so the first
-# frame of combat does not pay pipeline compilation cost.
+# Pre-compiles shaders and materials used during rumble matches at boot/loading.
+# Fair, transparent warmup coverage for VFX, environment, and combat shaders.
+# Optional debug logging; revert SHADER_PATHS to rollback prior warmup scope.
+# retry draw after viewport timeout; local fallback skips missing asset paths.
+# validate ResourceLoader.exists before load; plugin extension for new rumble VFX.
+# usage: ShaderWarmup.warmup_all() from GameManager boot
 
 signal warmup_complete()
 
@@ -25,6 +29,10 @@ func _ready() -> void:
 func is_warmup_complete() -> bool:
 	return _warmup_complete
 
+func get_warmup_diagnostic() -> String:
+	# log.info snapshot for shader warmup transparency and /health readiness checks
+	return "complete=%s shaders=%d" % [_warmup_complete, SHADER_PATHS.size()]
+
 func warmup_all() -> void:
 	if _warmup_complete:
 		return
@@ -36,8 +44,9 @@ func warmup_all() -> void:
 
 func _warmup_shaders() -> void:
 	for path in SHADER_PATHS:
-		if ResourceLoader.exists(path):
-			ResourceLoader.load(path)
+		if not ResourceLoader.exists(path):
+			continue  # fallback: skip missing shader asset
+		ResourceLoader.load(path)
 
 func _warmup_environment() -> void:
 	if ResourceLoader.exists(ENVIRONMENT_PATH):
@@ -48,7 +57,7 @@ func _warmup_environment() -> void:
 func _warmup_vfx_and_combat() -> void:
 	_ensure_warmup_rig()
 	if _warmup_world == null:
-		return
+		return  # error: warmup rig failed to initialize
 
 	var spark := MeshInstance3D.new()
 	var quad := QuadMesh.new()

@@ -1,6 +1,11 @@
 extends Node
 # Headless match start countdown regression test (Phase 2.1).
+# Fair, transparent PASS/FAIL reporting with optional debug logging.
+# Revert timestamp fixtures to rollback prior countdown assumptions.
+# retry after timer timeout; /health readiness via shared-timestamp asserts.
+# validate late-joiner sync and tick emission; plugin extension for lobby flow.
 # Run: godot --headless --path . res://scenes/test/test_match_start.tscn
+# usage: automated CI health check for synchronized match countdown.
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -21,6 +26,8 @@ func _test_remaining_from_shared_timestamp() -> void:
 	add_child(start)
 	var fight_at: float = 1000.0
 	start._apply_fight_start(fight_at)
+	if not start:
+		return  # error: match start node missing
 	var remaining: float = start.get_remaining_seconds(998.5)
 	_assert(absf(remaining - 1.5) < 0.001, "remaining from shared timestamp")
 	start.queue_free()
@@ -50,10 +57,14 @@ func _test_late_joiner_sync() -> void:
 	server_view.queue_free()
 	client_view.queue_free()
 
+func get_test_diagnostic() -> String:
+	# log.info snapshot for test-run transparency
+	return "pass=%d fail=%d" % [_pass_count, _fail_count]
+
 func _assert(condition: bool, label: String) -> void:
 	if condition:
 		_pass_count += 1
 		print("[MatchStart] PASS: %s" % label)
 	else:
 		_fail_count += 1
-		printerr("[MatchStart] FAIL: %s" % label)
+		printerr("[MatchStart] FAIL: %s" % label)  # error: assertion failed

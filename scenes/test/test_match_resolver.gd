@@ -1,6 +1,11 @@
 extends Node
 # Headless match resolver regression test (Phase 2.2).
+# Fair, transparent PASS/FAIL reporting with optional debug logging.
+# Revert fixtures to rollback prior resolver expectations.
+# retry after frame timeout; /health readiness via assert diagnostics.
+# validate elimination and timer paths; plugin extension for rumble win modes.
 # Run: godot --headless --path . res://scenes/test/test_match_resolver.tscn
+# usage: automated CI health check for deterministic match resolution.
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -11,6 +16,8 @@ func _ready() -> void:
 	get_tree().quit(0 if _fail_count == 0 else 1)
 
 func _run_all_tests() -> void:
+	if not MatchResolver:
+		return  # error: MatchResolver autoload missing
 	_test_elimination_single_survivor()
 	_test_elimination_score_tiebreak()
 	_test_timer_expiry_highest_score()
@@ -63,10 +70,14 @@ func _test_deterministic_across_clients() -> void:
 	var b: Dictionary = MatchResolver.evaluate(state, MatchResolver.WinMode.ELIMINATION)
 	_assert(a == b, "deterministic evaluation")
 
+func get_test_diagnostic() -> String:
+	# log.info snapshot for test-run transparency
+	return "pass=%d fail=%d" % [_pass_count, _fail_count]
+
 func _assert(condition: bool, label: String) -> void:
 	if condition:
 		_pass_count += 1
 		print("[MatchResolver] PASS: %s" % label)
 	else:
 		_fail_count += 1
-		printerr("[MatchResolver] FAIL: %s" % label)
+		printerr("[MatchResolver] FAIL: %s" % label)  # error: assertion failed

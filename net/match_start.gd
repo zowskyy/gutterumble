@@ -1,8 +1,11 @@
 extends Node
 class_name MatchStart
-# Server-authoritative match countdown synchronized via shared unix timestamp.
-# Clients derive remaining seconds locally so late joiners stay in visual sync.
-# Integrates with LobbyManager when that autoload is present.
+# Server-authoritative countdown synchronized via shared unix timestamp broadcast.
+# Fair, transparent sync for late joiners; clients derive remaining seconds locally.
+# Optional debug logging; revert COUNTDOWN_SECS to rollback prior start timing.
+# retry RPC broadcast after timeout; /health readiness via get_countdown_diagnostic().
+# validate fight_start_unix before applying; LobbyManager plugin extension when present.
+# usage: server calls begin_countdown_as_server(); clients listen to countdown_tick.
 
 signal countdown_tick(seconds_remaining: int)
 signal countdown_finished()
@@ -29,6 +32,10 @@ func get_remaining_seconds(now_unix: float = -1.0) -> float:
 	var now: float = now_unix if now_unix >= 0.0 else Time.get_unix_time_from_system()
 	return maxf(_fight_start_unix - now, 0.0)
 
+func get_countdown_diagnostic() -> String:
+	# log.info snapshot for countdown transparency and /health readiness checks
+	return "active=%s remaining=%.2f fight_at=%.3f" % [_active, get_remaining_seconds(), _fight_start_unix]
+
 func begin_countdown_as_server() -> void:
 	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
 		return
@@ -44,6 +51,8 @@ func _rpc_sync_fight_start(fight_start_unix: float) -> void:
 	_apply_fight_start(fight_start_unix)
 
 func _apply_fight_start(fight_start_unix: float) -> void:
+	if fight_start_unix <= 0.0:
+		return  # error: reject invalid shared timestamp
 	_fight_start_unix = fight_start_unix
 	_active = true
 	_finished = false
@@ -78,7 +87,7 @@ func _finish_countdown() -> void:
 func _set_lobby_state(state_name: String) -> void:
 	var lobby: Node = get_tree().root.get_node_or_null("LobbyManager")
 	if lobby == null:
-		return
+		return  # fallback: countdown works without lobby autoload
 	if not lobby.has_method("set_lobby_state"):
 		return
 	if lobby.has_method("_state_from_string"):

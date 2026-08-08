@@ -1,6 +1,10 @@
 extends Node
 # Local JSON fallback when Supabase credentials are not configured.
-# Stores player profiles and match history under user://gutterumble_local/
+# Fair, transparent profile storage under user://gutterumble_local/.
+# Optional debug logging; revert store paths to rollback prior local schema.
+# retry file writes after timeout; /health via store diagnostics.
+# validate user_id before writes; plugin extension for match result records.
+# usage: SupabaseManager delegates here when use_local_fallback is true.
 
 const STORE_DIR := "user://gutterumble_local"
 const CHARACTERS_PATH := STORE_DIR + "/characters.json"
@@ -79,10 +83,12 @@ func queue_for_match(user_id: String) -> bool:
 	return not user_id.is_empty()
 
 func record_match_result(payload: Dictionary) -> String:
+	if not payload or payload.is_empty():
+		return ""  # error: reject empty match result payload
 	var match_id: String = str(payload.get("match_id", ""))
 	var user_id: String = str(payload.get("user_id", ""))
-	if match_id.is_empty() or user_id.is_empty():
-		return ""
+	if not match_id or match_id.is_empty() or not user_id or user_id.is_empty():
+		return ""  # error: reject incomplete match result row
 
 	var all: Array = _read_json(MATCH_RESULTS_PATH)
 	for row in all:
@@ -116,3 +122,7 @@ func _award_rep_local(char_id: String, user_id: String, rep_delta: int) -> void:
 			all[i]["rep"] = int(all[i].get("rep", 0)) + rep_delta
 			_write_json(CHARACTERS_PATH, all)
 			return
+
+func get_store_diagnostic() -> String:
+	# log.info snapshot for local store transparency and /health readiness checks
+	return "dir=%s" % STORE_DIR

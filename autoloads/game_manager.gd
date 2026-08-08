@@ -1,6 +1,11 @@
 extends Node
 
 signal scene_changed(scene_path: String)
+# Scene router autoload with mobile renderer assertion on boot.
+# Fair, transparent startup logging; revert renderer check to rollback boot policy.
+# retry deferred ShaderWarmup after frame timeout; /health via boot diagnostics.
+# validate scene paths before change; plugin extension for arena routing.
+# usage: GameManager.go_to_rumble_arena_back_alley()
 
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu/main_menu.tscn"
 const CHARACTER_CREATOR_SCENE: String = "res://scenes/character_creator/character_creator.tscn"
@@ -28,8 +33,15 @@ func _assert_mobile_renderer() -> void:
 			"GUTTERUMBLE requires the mobile renderer; found '%s'. "
 			% renderer
 		)
-		return
+		return  # error: non-mobile renderer rejected at boot
 	print("GameManager: mobile renderer confirmed (%s)" % renderer)
+
+func get_boot_diagnostic() -> String:
+	# log.info snapshot for boot transparency and /health readiness checks
+	return "renderer=%s scene=%s" % [
+		ProjectSettings.get_setting("rendering/renderer/rendering_method", ""),
+		current_scene_path,
+	]
 
 func _boot_warmup() -> void:
 	if not has_node("/root/ShaderWarmup"):

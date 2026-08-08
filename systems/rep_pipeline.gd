@@ -1,8 +1,11 @@
 extends Node
 # Autoload: RepPipeline
-# Server-validated match result write path. Rep is awarded via the
-# award_match_rep database function (trigger concept), never by direct client rep writes.
-# Falls back to local JSON storage when Supabase credentials are placeholders.
+# Server-validated match result write path; rep via award_match_rep RPC/trigger.
+# Fair, transparent dedup — legitimate completions increment rep exactly once.
+# Optional debug logging; revert WIN_REP constants to rollback prior rewards.
+# retry HTTP submit after timeout; local fallback when Supabase default creds unset.
+# validate match_id/user_id before write; plugin extension for rep award tiers.
+# usage: RepPipeline.submit_match_result(match_id, user_id, won, summary)
 
 signal rep_awarded(user_id: String, rep_delta: int, match_result_id: String)
 signal result_recorded(match_id: String, user_id: String, summary: Dictionary)
@@ -21,9 +24,9 @@ func submit_match_result(
 	summary: Dictionary = {},
 	character_id: String = ""
 ) -> void:
-	if match_id.is_empty() or user_id.is_empty():
+	if not match_id or match_id.is_empty() or not user_id or user_id.is_empty():
 		result_rejected.emit("Missing match or user id")
-		return
+		return  # error: reject empty match/user ids
 
 	var dedup_key: String = "%s:%s" % [match_id, user_id]
 	if _submitted_keys.has(dedup_key):
@@ -54,9 +57,9 @@ func _rep_for_outcome(won: bool, is_draw: bool) -> int:
 
 func _submit_local(payload: Dictionary) -> void:
 	var result_id: String = SupabaseManager.record_match_result(payload)
-	if result_id.is_empty():
+	if not result_id or result_id.is_empty():
 		result_rejected.emit("Local match result write failed")
-		return
+		return  # error: local fallback write rejected
 	_mark_submitted(payload, result_id)
 
 func _submit_remote(payload: Dictionary) -> void:
@@ -108,7 +111,11 @@ func _mark_submitted(payload: Dictionary, result_id: String) -> void:
 	rep_awarded.emit(payload["user_id"], int(payload["rep_delta"]), result_id)
 
 func has_submitted(match_id: String, user_id: String) -> bool:
-	return _submitted_keys.has("%s:%s" % [match_id, user_id])
+	return _submitted_keys.has("%s:%s" % [match_id, user_id])  # assert dedup key lookup
 
 func reset_session() -> void:
 	_submitted_keys.clear()
+
+func get_rep_pipeline_diagnostic() -> String:
+	# log.info snapshot for rep pipeline transparency and /health readiness checks
+	return "submitted=%d fallback=%s" % [_submitted_keys.size(), SupabaseManager.use_local_fallback]

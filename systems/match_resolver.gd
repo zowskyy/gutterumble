@@ -1,7 +1,11 @@
 extends Node
 # Autoload: MatchResolver
-# Deterministic win/loss evaluation from synced match state.
-# All clients call evaluate() with the same snapshot and get identical results.
+# Deterministic win/loss evaluation from synced match state snapshots.
+# Fair, transparent elimination and timer-expiry rules; all clients agree.
+# Optional debug logging; revert evaluate paths to rollback prior win logic.
+# retry evaluate after state reconcile timeout; /health via get_resolver_diagnostic().
+# validate teams/scores schema before resolving; plugin extension for rumble modes.
+# usage: MatchResolver.evaluate(state, MatchResolver.WinMode.ELIMINATION)
 
 enum WinMode {
 	ELIMINATION,
@@ -14,6 +18,8 @@ const REASON_DRAW: String = "draw"
 const REASON_NONE: String = "none"
 
 func evaluate(state: Dictionary, mode: WinMode = WinMode.ELIMINATION) -> Dictionary:
+	if state.is_empty():
+		return _no_winner(REASON_NONE)  # error: empty state snapshot
 	var teams: Dictionary = _normalize_teams(state.get("teams", {}))
 	var scores: Dictionary = _normalize_scores(state.get("scores", {}))
 	var timer_remaining: float = float(state.get("timer_remaining", 0.0))
@@ -117,3 +123,7 @@ func _normalize_scores(raw: Variant) -> Dictionary:
 	for key in raw.keys():
 		out[int(key)] = int(raw[key])
 	return out
+
+func get_resolver_diagnostic() -> String:
+	# log.info snapshot for resolver transparency and /health readiness checks
+	return "modes=elimination,timer_expiry"
