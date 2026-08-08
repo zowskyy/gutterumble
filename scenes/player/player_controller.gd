@@ -44,6 +44,8 @@ var _dodge_dir: Vector3  = Vector3.ZERO
 var _phase_timer: float  = 0.0
 var _phase_dur: float    = 0.0
 var _special_lockout: float = 0.0
+var is_staggered: bool   = false
+var _stagger_timer: float = 0.0
 
 # ── Node refs (null-safe) ─────────────────────────────────────────────────────
 @onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
@@ -91,6 +93,7 @@ func _setup_trails() -> void:
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
+	_tick_stagger(delta)
 	_tick_special_lockout(delta)
 	_expire_input_buffer()
 	_collect_input()
@@ -145,7 +148,17 @@ func _should_buffer_inputs() -> bool:
 			return true
 	return false
 
+func _tick_stagger(delta: float) -> void:
+	if not is_staggered:
+		return
+	_stagger_timer -= delta
+	if _stagger_timer <= 0.0:
+		is_staggered = false
+		_stagger_timer = 0.0
+
 func _collect_input() -> void:
+	if is_staggered:
+		return
 	if not _should_buffer_inputs():
 		return
 	if _action_just_pressed("attack_light", KEY_Z):
@@ -178,6 +191,8 @@ func _update_fsm(delta: float) -> void:
 
 # ── Locomotion ────────────────────────────────────────────────────────────────
 func _handle_locomotion(delta: float) -> void:
+	if is_staggered:
+		return
 	var iv := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 
 	if _has_buffered(BUFFER_ACTION_DODGE):
@@ -220,6 +235,8 @@ func _tick_special_lockout(delta: float) -> void:
 		_special_lockout = maxf(0.0, _special_lockout - delta)
 
 func _try_activate_special() -> void:
+	if is_staggered:
+		return
 	if combat_state == AttackConfig.CombatState.KO:
 		return
 	if not _action_just_pressed("special_attack", KEY_C):
@@ -256,10 +273,9 @@ func _do_special_aoe() -> void:
 			continue
 		hit_ids[id] = true
 		if target.has_method("take_damage"):
-			target.take_damage(data.damage)
+			target.take_damage(data.damage, "special_aoe")
 		if target is CharacterBody3D:
-			var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
-			(target as CharacterBody3D).velocity += dir * data.knockback
+			_apply_hit_knockback(target as CharacterBody3D, "special_aoe", data)
 
 	CombatFeel.hit_ko()
 	AudioManager.play_sfx("special_activate")
@@ -267,6 +283,8 @@ func _do_special_aoe() -> void:
 
 # ── Attack initiation ─────────────────────────────────────────────────────────
 func _try_start_attack() -> void:
+	if is_staggered:
+		return
 	if _has_buffered(BUFFER_ACTION_LIGHT) or _action_just_pressed("attack_light", KEY_Z):
 		if _has_buffered(BUFFER_ACTION_LIGHT):
 			_consume_buffered(BUFFER_ACTION_LIGHT)
@@ -392,15 +410,26 @@ func _set_hitbox(active: bool) -> void:
 	else:
 		_hitbox.end_swing()
 
+func _apply_hit_knockback(target: CharacterBody3D, attack_id: String, data: Dictionary) -> void:
+	var flat_self := Vector3(global_position.x, 0.0, global_position.z)
+	var flat_target := Vector3(target.global_position.x, 0.0, target.global_position.z)
+	var dir := (flat_target - flat_self).normalized()
+	if dir.length() < 0.01:
+		dir = -Vector3(global_transform.basis.z).normalized()
+	var impulse: float = data.knockback
+	target.velocity += dir * impulse
+	var weight: String = AttackConfig.get_attack_weight(attack_id, data.damage)
+	var est_distance: float = impulse * AttackConfig.get_stagger_secs(weight)
+	print("[knockback] weight=%s impulse=%.2f est_distance=%.2f" % [weight, impulse, est_distance])
+
 func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 	if target == self or not AttackConfig.ATTACK_DATA.has(current_attack_id):
 		return
 	var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 	if target.has_method("take_damage"):
-		target.take_damage(data.damage)
+		target.take_damage(data.damage, current_attack_id)
 	if target is CharacterBody3D:
-		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
-		(target as CharacterBody3D).velocity += dir * data.knockback
+		_apply_hit_knockback(target as CharacterBody3D, current_attack_id, data)
 	# Combat feel — hit-stop, sound, and hit-spark on every landed hit
 	var is_heavy: bool = data.damage >= 20.0
 	var contact_point: Vector3 = hurtbox.global_position
@@ -417,7 +446,7 @@ func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 	hit_landed.emit(target, current_attack_id, data.damage)
 
 # ── Receive damage ────────────────────────────────────────────────────────────
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attack_id: String = "") -> void:
 	if invulnerable or combat_state == AttackConfig.CombatState.KO:
 		return
 	health = maxf(0.0, health - amount)
@@ -426,14 +455,17 @@ func take_damage(amount: float) -> void:
 	if health <= 0.0:
 		_enter_ko()
 	else:
-		_enter_hit_react(amount)
+		_enter_hit_react(amount, attack_id)
 
-func _enter_hit_react(amount: float) -> void:
+func _enter_hit_react(amount: float, attack_id: String = "") -> void:
 	combat_state = AttackConfig.CombatState.HIT_REACT
 	attack_phase = AttackConfig.AttackPhase.NONE
 	_set_hitbox(false)
 	invulnerable = true
-	_travel(AttackConfig.ANIM_HIT_HEAVY if amount >= 20.0 else AttackConfig.ANIM_HIT_LIGHT)
+	is_staggered = true
+	_stagger_timer = AttackConfig.get_stagger_secs_for_hit(attack_id, amount)
+	_clear_input_buffer()
+	_travel(AttackConfig.ANIM_HIT_HEAVY if amount >= AttackConfig.HEAVY_DAMAGE_THRESHOLD else AttackConfig.ANIM_HIT_LIGHT)
 	get_tree().create_timer(0.45).timeout.connect(func() -> void:
 		invulnerable = false
 		if combat_state == AttackConfig.CombatState.HIT_REACT:
@@ -504,6 +536,8 @@ func reset_for_respawn() -> void:
 	current_attack_id   = ""
 	_clear_input_buffer()
 	invulnerable        = false
+	is_staggered        = false
+	_stagger_timer      = 0.0
 	velocity            = Vector3.ZERO
 	_set_hitbox(false)
 	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)

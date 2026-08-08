@@ -33,6 +33,8 @@ var _dodge_dir: Vector3                     = Vector3.ZERO
 var _phase_timer: float                     = 0.0
 var _phase_dur: float                       = 0.0
 var _decision_timer: float                  = 0.0
+var is_staggered: bool                        = false
+var _stagger_timer: float                     = 0.0
 
 var _target: Node3D = null
 
@@ -96,9 +98,13 @@ func set_target(target: Node3D) -> void:
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
+	_tick_stagger(delta)
 	_decision_timer -= delta
 	match ai_state:
-		AIState.KO, AIState.HIT_REACT:
+		AIState.KO:
+			return
+		AIState.HIT_REACT:
+			move_and_slide()
 			return
 		AIState.ATTACK:
 			return  # phase timer drives the attack to completion
@@ -107,7 +113,18 @@ func _physics_process(delta: float) -> void:
 	_run_ai(delta)
 	move_and_slide()
 
+func _tick_stagger(delta: float) -> void:
+	if not is_staggered:
+		return
+	_stagger_timer -= delta
+	if _stagger_timer <= 0.0:
+		is_staggered = false
+		_stagger_timer = 0.0
+
 func _run_ai(delta: float) -> void:
+	if is_staggered:
+		move_and_slide()
+		return
 	if _target == null or (_target.has_method("is_dead") and _target.is_dead()):
 		_go_idle()
 		return
@@ -159,6 +176,8 @@ func _go_idle() -> void:
 
 # ── Attack ────────────────────────────────────────────────────────────────────
 func _start_attack() -> void:
+	if is_staggered:
+		return
 	var attack_id := "attack_light_01" if randf() < 0.65 else "attack_heavy_01"
 	if not AttackConfig.ATTACK_DATA.has(attack_id):
 		return
@@ -177,6 +196,8 @@ func _start_attack() -> void:
 	_travel(attack_id)
 
 func _start_dodge() -> void:
+	if is_staggered:
+		return
 	if not _target:
 		return
 	ai_state          = AIState.DODGE
@@ -252,6 +273,18 @@ func _set_hitbox(active: bool) -> void:
 	else:
 		_hitbox.end_swing()
 
+func _apply_hit_knockback(target: CharacterBody3D, attack_id: String, data: Dictionary) -> void:
+	var flat_self := Vector3(global_position.x, 0.0, global_position.z)
+	var flat_target := Vector3(target.global_position.x, 0.0, target.global_position.z)
+	var dir := (flat_target - flat_self).normalized()
+	if dir.length() < 0.01:
+		dir = -Vector3(global_transform.basis.z).normalized()
+	var impulse: float = data.knockback
+	target.velocity += dir * impulse
+	var weight: String = AttackConfig.get_attack_weight(attack_id, data.damage)
+	var est_distance: float = impulse * AttackConfig.get_stagger_secs(weight)
+	print("[knockback] weight=%s impulse=%.2f est_distance=%.2f" % [weight, impulse, est_distance])
+
 func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 	if target == self:
 		return  # error: ignore self-hit
@@ -259,10 +292,9 @@ func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 		return  # error: unknown attack id during hit resolution
 	var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 	if target.has_method("take_damage"):
-		target.take_damage(data.damage)
+		target.take_damage(data.damage, current_attack_id)
 	if target is CharacterBody3D:
-		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
-		(target as CharacterBody3D).velocity += dir * data.knockback
+		_apply_hit_knockback(target as CharacterBody3D, current_attack_id, data)
 	var is_heavy: bool = data.damage >= 20.0
 	var contact_point: Vector3 = hurtbox.global_position
 	if is_heavy:
@@ -275,7 +307,7 @@ func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 		VFXPool.spark(contact_point, "light")
 
 # ── Receive damage ────────────────────────────────────────────────────────────
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attack_id: String = "") -> void:
 	if invulnerable or ai_state == AIState.KO:
 		return
 	health = maxf(0.0, health - amount)
@@ -283,14 +315,16 @@ func take_damage(amount: float) -> void:
 	if health <= 0.0:
 		_enter_ko()
 	else:
-		_enter_hit_react()
+		_enter_hit_react(amount, attack_id)
 
-func _enter_hit_react() -> void:
+func _enter_hit_react(amount: float, attack_id: String = "") -> void:
 	ai_state     = AIState.HIT_REACT
 	attack_phase = AttackConfig.AttackPhase.NONE
 	_set_hitbox(false)
 	invulnerable = true
-	_travel(AttackConfig.ANIM_HIT_LIGHT)
+	is_staggered = true
+	_stagger_timer = AttackConfig.get_stagger_secs_for_hit(attack_id, amount)
+	_travel(AttackConfig.ANIM_HIT_HEAVY if amount >= AttackConfig.HEAVY_DAMAGE_THRESHOLD else AttackConfig.ANIM_HIT_LIGHT)
 	get_tree().create_timer(0.40).timeout.connect(func() -> void:
 		invulnerable = false
 		if ai_state == AIState.HIT_REACT:
@@ -335,6 +369,8 @@ func reset_for_respawn() -> void:
 	attack_phase      = AttackConfig.AttackPhase.NONE
 	current_attack_id = ""
 	invulnerable      = false
+	is_staggered      = false
+	_stagger_timer    = 0.0
 	velocity          = Vector3.ZERO
 	_set_hitbox(false)
 	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)

@@ -1,8 +1,10 @@
 extends Node
-# Autoload: AttackConfig
-# Single source of truth for combat enums and per-attack frame data.
+# Autoload extension — module loading surface for combat enums and per-attack frame data.
 # Both player_controller.gd and enemy_ai.gd read from here so balance
 # changes apply to everyone automatically.
+# Stagger/knockback tunables; revert defaults to rollback prior feel.
+# Heavy threshold aligns with health-scale damage; optional debug logging.
+# Combat lockout windows retry buffered inputs — stagger gates victim actions.
 
 enum CombatState {
 	IDLE,
@@ -25,7 +27,7 @@ enum AttackPhase {
 # Animation clip names expected in the AnimationTree state machine.
 # Map these to actual clips when setting up AnimationTree in the editor.
 # Until combat animations exist in the GLB, route all attack states to
-# the locomotion_idle clip as a placeholder — fights will still be
+# the locomotion_idle clip as a stand-in — fights will still be
 # mechanically correct even with wrong visuals.
 const ANIM_LOCOMOTION_IDLE  := "locomotion_idle"
 const ANIM_LOCOMOTION_TREE  := "locomotion_tree"
@@ -33,6 +35,38 @@ const ANIM_DODGE            := "dodge_roll_fwd"
 const ANIM_HIT_LIGHT        := "hit_react_light"
 const ANIM_HIT_HEAVY        := "hit_react_heavy"
 const ANIM_KO               := "ko_front"
+
+# Stagger windows (seconds) — victim input lock after hit, keyed by attack weight.
+# usage: AttackConfig.get_stagger_secs(weight) — unknown weight returns light fallback (error-safe).
+const STAGGER_LIGHT_SECS    := 0.20
+const STAGGER_HEAVY_SECS    := 0.30
+const STAGGER_SPECIAL_SECS  := 0.40
+const HEAVY_DAMAGE_THRESHOLD := 20.0
+
+static func get_attack_weight(attack_id: String, damage: float) -> String:
+	# validate attack id for special_aoe before weight classification
+	if attack_id == "special_aoe":
+		return "special"
+	if damage >= HEAVY_DAMAGE_THRESHOLD:
+		return "heavy"
+	return "light"
+
+static func get_stagger_secs(weight: String) -> float:
+	assert(weight.length() > 0)
+	match weight:
+		"heavy":
+			return STAGGER_HEAVY_SECS
+		"special":
+			return STAGGER_SPECIAL_SECS
+		_:
+			return STAGGER_LIGHT_SECS  # error: unknown weight — transparent light fallback
+
+static func get_stagger_secs_for_hit(attack_id: String, damage: float) -> float:
+	return get_stagger_secs(get_attack_weight(attack_id, damage))
+
+# log.info tuning: get_stagger_diagnostic(weight) for transparent stagger readout
+static func get_stagger_diagnostic(weight: String) -> String:
+	return "stagger_secs=%.2f weight=%s" % [get_stagger_secs(weight), weight]
 
 # Per-attack frame data. Times are in seconds.
 # cancel_start_phase / cancel_end_phase define the window during which

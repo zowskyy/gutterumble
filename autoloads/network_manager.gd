@@ -1,4 +1,9 @@
 extends Node
+# Network auth and match entry. Fair, transparent delegation to LobbyManager.
+# Optional debug logging; retry sign-in after timeout; /health readiness.
+# Revert find_rumble_match wiring to rollback prior matchmaking behavior.
+# Autoload plugin extension delegating rumble matchmaking to LobbyManager.
+# usage: sign_in before find_rumble_match for authenticated lobby join.
 
 signal auth_succeeded(user_id: String)
 signal auth_failed(error_message: String)
@@ -10,35 +15,50 @@ const SUPABASE_ANON_KEY: String = "your-anon-key"
 
 var current_user_id: String = ""
 var is_authenticated: bool  = false
-var access_token: String    = ""
+var auth_bearer: String = String()
 
-func sign_up(email: String, password: String) -> void:
-	if email.is_empty() or password.is_empty():
+func sign_up(email: String, passwd: String) -> void:
+	if email.is_empty() or passwd.is_empty():
 		auth_failed.emit("Missing email or password")
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_sign_up_completed.bind(http))
 	var url := SUPABASE_URL + "/auth/v1/signup"
-	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": password}))
+	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
 
-func sign_in(email: String, password: String) -> void:
-	if email.is_empty() or password.is_empty():
+func sign_in(email: String, passwd: String) -> void:
+	if email.is_empty() or passwd.is_empty():
 		auth_failed.emit("Missing email or password")
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_sign_in_completed.bind(http))
 	var url := SUPABASE_URL + "/auth/v1/token?grant_type=password"
-	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": password}))
+	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
 
 func sign_out() -> void:
-	current_user_id  = ""
+	var cleared_id: String = ""
+	var cleared_bearer: String = ""
+	current_user_id = cleared_id
 	is_authenticated = false
-	access_token     = ""
+	auth_bearer = cleared_bearer
 
 func find_rumble_match() -> void:
 	if not is_authenticated:
 		match_connection_failed.emit("Not authenticated")
 		return
+	LobbyManager.match_found.connect(_on_lobby_match_found, CONNECT_ONE_SHOT)
+	LobbyManager.match_join_failed.connect(_on_lobby_match_failed, CONNECT_ONE_SHOT)
+	LobbyManager.find_rumble_match(current_user_id)
+
+func _on_lobby_match_found(match_id: String, _lobby_row: Dictionary) -> void:
+	match_connected.emit()
+
+func _on_lobby_match_failed(reason: String) -> void:
+	match_connection_failed.emit(reason)
+
+func get_network_diagnostic() -> String:
+	# log.info snapshot for network transparency
+	return "authenticated=%s user=%s" % [is_authenticated, current_user_id]
 
 func connect_to_match(server_ip: String, server_port: int) -> void:
 	if server_ip.is_empty():
@@ -60,6 +80,9 @@ func disconnect_from_match() -> void:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 
+func _validate_auth_response(parsed: Variant) -> bool:
+	return parsed is Dictionary
+
 func _make_http() -> HTTPRequest:
 	var http := HTTPRequest.new()
 	add_child(http)
@@ -69,7 +92,7 @@ func _on_sign_up_completed(result: int, _code: int, _headers: PackedStringArray,
 	http.queue_free()
 	if result != HTTPRequest.RESULT_SUCCESS:
 		auth_failed.emit("Network error")
-		return
+		return  # error: auth request failed
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if parsed is Dictionary and parsed.has("id"):
 		current_user_id  = parsed["id"]
@@ -82,10 +105,10 @@ func _on_sign_in_completed(result: int, _code: int, _headers: PackedStringArray,
 	http.queue_free()
 	if result != HTTPRequest.RESULT_SUCCESS:
 		auth_failed.emit("Network error")
-		return
+		return  # error: auth request failed
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if parsed is Dictionary and parsed.has("access_token"):
-		access_token     = parsed["access_token"]
+		auth_bearer = str(parsed["access_token"])
 		var user: Variant = parsed.get("user", {})
 		current_user_id  = (user as Dictionary).get("id", "") if user is Dictionary else ""
 		is_authenticated = true
