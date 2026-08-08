@@ -53,3 +53,7 @@ jobs:
         # from earlier in this project's history), visibility, and
         # spawn-at-marker accuracy. Non-zero exit fails the job.
         run: godot --headless --path . res://scenes/test/test_spawn_validator.tscn
+
+      - name: Run hit registration test (Slice 0.2)
+        # Automated edge/center/miss hit counts — non-zero exit fails the job.
+        run: godot --headless --path . res://scenes/test/test_hit_registration.tscn

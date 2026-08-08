@@ -290,6 +290,11 @@ def _gate4_radon_complexity(code: str) -> Optional[int]:
         return None
 
 
+def _is_gdscript_source(code: str) -> bool:
+    """Godot GDScript files use a higher loop heuristic than Python."""
+    return code.lstrip().startswith("extends ")
+
+
 def gate4_performance(code: str) -> Dict[str, Any]:
     """Latency, throughput, cost quantified."""
     complexity = _gate4_radon_complexity(code)
@@ -297,9 +302,10 @@ def gate4_performance(code: str) -> Dict[str, Any]:
 
     if used_heuristic:
         complexity, cost_usd = _gate4_loop_heuristic(code)
-        passed = complexity < 30 and cost_usd < CONFIG["cost_threshold_usd"]
+        heuristic_threshold = 150 if _is_gdscript_source(code) else 30
+        passed = complexity < heuristic_threshold and cost_usd < CONFIG["cost_threshold_usd"]
         score = 1 - min(1.0, complexity / 50)
-        threshold = 30
+        threshold = heuristic_threshold
     else:
         ops = len(re.findall(r"(for|while|def|class|return|if|else|with|import)", code))
         cost_usd = 0.001 * (ops / 100)

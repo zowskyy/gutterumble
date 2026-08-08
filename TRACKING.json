@@ -14,7 +14,7 @@
           "id": "0.1",
           "title": "Movement Controller Feel Pass",
           "difficulty": "M",
-          "status": "IN_PROGRESS",
+          "status": "CODE_COMPLETE",
           "files": ["scenes/player/player_controller.gd"],
           "acceptance_criteria": [
             "Play-test 10 minutes solo — no network, no customization loaded",
@@ -22,20 +22,26 @@
             "No clipping through 20x20 test-room geometry at max speed"
           ],
           "git_commit": "Slice 0.1: Tune core movement feel",
-          "notes": "Partial: acceleration/friction @export exist; turn_speed hardcoded; buffer lacks 100-150ms timed window for dash/attack during lockout"
+          "notes": "Implemented: @export turn_speed, 120ms timed input buffer for attack/dodge during lockout, get_movement_tuning_snapshot(). Verification steps pending."
         },
         {
           "id": "0.2",
           "title": "Combat Hit Registration",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["scenes/combat/hitbox.gd", "scenes/combat/hurtbox.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "scenes/combat/hitbox.gd",
+            "scenes/combat/hurtbox.gd",
+            "scenes/player/player_controller.gd",
+            "scenes/enemies/enemy_ai.gd",
+            "scenes/test/test_hit_registration.gd"
+          ],
           "acceptance_criteria": [
             "Automated test: dummy at 3 distances — exactly 1 hit per swing, 0 on miss",
             "No tunneling at high player movement speed"
           ],
           "git_commit": "Slice 0.2: Fix hit registration and prevent multi-hit",
-          "notes": "hitbox.gd has _hit_ids; player_controller uses inline hitbox; hurtbox.gd missing; no per-swing hit_this_swing set"
+          "notes": "Hitbox/Hurtbox components with per-swing dedup; test_hit_registration.tscn for edge/center/miss. High-speed tunneling verification pending."
         },
         {
           "id": "0.3",

@@ -1,0 +1,30 @@
+# Web search verification — AUTOMATIC
+
+**Always on.** Before delivering substantive technical guidance, architecture decisions, or slice implementations, verify claims against current external sources.
+
+## When to search
+
+Run a web search before responding when the answer involves:
+
+- Engine/API behavior (Godot 4.x, Android, Supabase)
+- Security, RLS, auth, or Play Store compliance
+- Performance targets (60fps, shader warmup, Realtime latency)
+- Best-practice patterns cited in Frontier gate (G5) or `docs/CITATION_MAP.md`
+
+Skip search for: pure repo-local facts (file paths, git status, already-verified code), or question-only replies with no new technical claims.
+
+## How to verify
+
+1. Check `docs/CITATION_MAP.md` first — it holds verified citations and slice-to-source mapping.
+2. If the map is stale or the topic is missing, web search with version/year keywords (e.g. `Godot 4.7`, `2025`, `2026`).
+3. Cross-check at least one primary source (official docs, Supabase docs, Godot docs) when available.
+4. Update `docs/CITATION_MAP.md` when new citations materially change a slice decision.
+
+## Response standard
+
+In delivery summaries, note when a decision is **citation-backed** (link or doc name) vs **repo-local**. Do not assert API limits, latency numbers, or platform requirements without a search or map entry.
+
+## Integration with Taylor + Frontier relay
+
+- **Taylor workers** must consult `CITATION_MAP.md` before implementing networking, performance, or platform slices.
+- **Frontier relay** (both gate scripts) runs after every change; web search fills G5 citation gaps in the map, not in code comments.
