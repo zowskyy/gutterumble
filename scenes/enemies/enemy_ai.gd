@@ -33,7 +33,7 @@ var _decision_timer: float                  = 0.0
 var _target: Node3D = null
 
 # ── Node refs ─────────────────────────────────────────────────────────────────
-@onready var _hitbox: Area3D = get_node_or_null("Hitbox")
+@onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
 var _anim_tree: AnimationTree
 var _anim_sm: AnimationNodeStateMachinePlayback
 var _trail_r: AttackTrail
@@ -61,8 +61,7 @@ func _ready() -> void:
 	if _anim_tree:
 		_anim_sm = _anim_tree.get("parameters/playback")
 	if _hitbox:
-		_hitbox.monitoring = false
-		_hitbox.area_entered.connect(_on_hitbox_area_entered)
+		_hitbox.hit_landed.connect(_on_hitbox_hit_landed)
 	_setup_trails()
 	_setup_visibility_throttle()
 
@@ -238,13 +237,17 @@ func _set_hitbox(active: bool) -> void:
 		_trail_l.set_active(active)
 	if not _hitbox:
 		return
-	_hitbox.monitoring = active
-	var shape := _hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	if shape:
-		shape.disabled = not active
+	if active:
+		if not AttackConfig.ATTACK_DATA.has(current_attack_id):
+			return
+		var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
+		var frames: int = maxi(3, int(data.active_time / (1.0 / 60.0)))
+		_hitbox.set_active_frames(frames)
+		_hitbox.begin_swing(data.damage, data.knockback)
+	else:
+		_hitbox.end_swing()
 
-func _on_hitbox_area_entered(area: Area3D) -> void:
-	var target := area.get_parent()
+func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
 	if target == self or not AttackConfig.ATTACK_DATA.has(current_attack_id):
 		return
 	var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
@@ -254,7 +257,7 @@ func _on_hitbox_area_entered(area: Area3D) -> void:
 		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
 		(target as CharacterBody3D).velocity += dir * data.knockback
 	var is_heavy: bool = data.damage >= 20.0
-	var contact_point: Vector3 = (area as Node3D).global_position
+	var contact_point: Vector3 = hurtbox.global_position
 	if is_heavy:
 		CombatFeel.hit_heavy()
 		AudioManager.play_sfx("hit_heavy")

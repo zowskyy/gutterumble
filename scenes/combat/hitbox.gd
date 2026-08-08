@@ -1,33 +1,62 @@
 extends Area3D
-# Standalone hitbox component (kept for arena props and future use).
-# player_controller.gd and enemy_ai.gd manage their own Hitbox children
-# directly — this script is for hitboxes that need to exist independently
-# of a fighter script (e.g. hazard zones, projectiles).
+class_name Hitbox
+# Reusable fighter hitbox component. Uses Area3D.area_entered (not per-frame
+# polling), per-swing dedup via _hit_this_swing, and a short active window
+# counted in physics frames. Callers extend the window with set_active_frames()
+# before begin_swing() when AttackConfig active_time warrants more frames.
 
-@export var damage: float    = 10.0
-@export var knockback: float = 5.0
+signal hit_landed(target: Node3D, hurtbox: Area3D)
 
-signal hit_target(target: Node3D, damage: float)
+@export var active_physics_frames: int = 3
 
-var _hit_ids: Array[int] = []
+var _hit_this_swing: Dictionary = {}
+var _active_frames_remaining: int = 0
+var _collision_shape: CollisionShape3D
 
 func _ready() -> void:
+	_collision_shape = get_node_or_null("CollisionShape3D") as CollisionShape3D
+	monitoring = false
 	area_entered.connect(_on_area_entered)
 
-func reset() -> void:
-	_hit_ids.clear()
+func set_active_frames(frame_count: int) -> void:
+	active_physics_frames = maxi(3, frame_count)
+
+func begin_swing(_damage: float, _knockback: float) -> void:
+	_hit_this_swing.clear()
+	_active_frames_remaining = active_physics_frames
+	monitoring = true
+	if _collision_shape:
+		_collision_shape.disabled = false
+
+func end_swing() -> void:
+	_active_frames_remaining = 0
+	monitoring = false
+	if _collision_shape:
+		_collision_shape.disabled = true
+
+func _physics_process(_delta: float) -> void:
+	if _active_frames_remaining <= 0:
+		return
+	_active_frames_remaining -= 1
+	if _active_frames_remaining <= 0:
+		end_swing()
 
 func _on_area_entered(area: Area3D) -> void:
-	var target := area.get_parent()
+	if not _is_hurtbox(area):
+		return
+	var target := area.get_parent() as Node3D
 	if target == null:
 		return
-	var id := target.get_instance_id()
-	if id in _hit_ids:
+	var target_id: int = target.get_instance_id()
+	if _hit_this_swing.has(target_id):
 		return
-	_hit_ids.append(id)
-	if target.has_method("take_damage"):
-		target.take_damage(damage)
-	if target is CharacterBody3D:
-		var dir: Vector3 = ((target as Node3D).global_position - global_position).normalized()
-		target.velocity += dir * knockback
-	hit_target.emit(target, damage)
+	_hit_this_swing[target_id] = true
+	hit_landed.emit(target, area)
+
+func _is_hurtbox(area: Area3D) -> bool:
+	if area.is_in_group("hurtbox"):
+		return true
+	var area_script: Script = area.get_script()
+	if area_script != null and area_script.resource_path.ends_with("hurtbox.gd"):
+		return true
+	return false
