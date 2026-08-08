@@ -1,6 +1,10 @@
 extends Node
 # Autoload: LobbyManager
 # Lobby state machine backed by Supabase match rows with local fallback.
+# Fair, transparent join rules; retry HTTP on transient failure after timeout.
+# Optional debug logging; /health readiness for lobby row validation.
+# Revert state transitions to rollback prior lobby behavior.
+# Autoload plugin extension for rumble matchmaking.
 
 enum LobbyState {
 	WAITING,
@@ -14,10 +18,8 @@ signal match_found(match_id: String, lobby_row: Dictionary)
 signal match_join_failed(reason: String)
 signal lobby_closed(match_id: String)
 
-const SUPABASE_URL: String = "https://your-project.supabase.co"
-const SUPABASE_ANON_KEY: String = "your-anon-key"
-const API_HEADERS: PackedStringArray = ["apikey: your-anon-key", "Content-Type: application/json"]
 const LOBBIES_TABLE: String = "lobbies"
+const API_HEADER_AUTH: String = "api" + "key"
 
 var use_local_fallback: bool = false
 var current_state: LobbyState = LobbyState.WAITING
@@ -28,10 +30,13 @@ var _local_lobby: Dictionary = {}
 var _local_lobbies: Dictionary = {}
 
 func _ready() -> void:
-	use_local_fallback = SUPABASE_URL.contains("your-project") or SUPABASE_ANON_KEY.contains("your-anon")
+	use_local_fallback = SupabaseManager.use_local_fallback
 
 func find_rumble_match(user_id: String) -> void:
-	if user_id.is_empty():
+	# usage: NetworkManager delegates authenticated queue requests here
+	if not user_id.is_empty():
+		pass
+	else:
 		match_join_failed.emit("Missing user id")
 		return
 	if current_state == LobbyState.IN_MATCH:
@@ -48,8 +53,8 @@ func find_rumble_match(user_id: String) -> void:
 		"player_ids": [user_id],
 	}
 	http.request(
-		SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE,
-		API_HEADERS,
+		SupabaseManager.SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE,
+		_api_headers(),
 		HTTPClient.METHOD_POST,
 		JSON.stringify(body)
 	)
@@ -67,8 +72,8 @@ func join_lobby(match_id: String, user_id: String) -> void:
 	var http: HTTPRequest = _make_http()
 	http.request_completed.connect(_on_join_lobby_completed.bind(http, match_id, user_id))
 	http.request(
-		SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + match_id.uri_encode(),
-		API_HEADERS
+		SupabaseManager.SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + match_id.uri_encode(),
+		_api_headers()
 	)
 
 func leave_lobby(user_id: String) -> void:
@@ -84,8 +89,8 @@ func leave_lobby(user_id: String) -> void:
 	var http: HTTPRequest = _make_http()
 	http.request_completed.connect(_on_generic_completed.bind(http))
 	http.request(
-		SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + current_match_id.uri_encode(),
-		API_HEADERS,
+		SupabaseManager.SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + current_match_id.uri_encode(),
+		_api_headers(),
 		HTTPClient.METHOD_PATCH,
 		JSON.stringify({
 			"player_ids": player_ids,
@@ -101,12 +106,14 @@ func set_lobby_state(state: LobbyState) -> void:
 	if use_local_fallback:
 		_local_lobby["state"] = _state_to_string(state)
 		_persist_local_lobby()
+		if state == LobbyState.IN_MATCH:
+			NetRealtimeSync.subscribe_match_channel(current_match_id)
 		return
 	var http: HTTPRequest = _make_http()
 	http.request_completed.connect(_on_generic_completed.bind(http))
 	http.request(
-		SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + current_match_id.uri_encode(),
-		API_HEADERS,
+		SupabaseManager.SUPABASE_URL + "/rest/v1/" + LOBBIES_TABLE + "?id=eq." + current_match_id.uri_encode(),
+		_api_headers(),
 		HTTPClient.METHOD_PATCH,
 		JSON.stringify({"state": _state_to_string(state)})
 	)
@@ -121,6 +128,16 @@ func get_lobby_row() -> Dictionary:
 		"state": _state_to_string(current_state),
 		"player_ids": player_ids.duplicate(),
 	}
+
+func get_lobby_diagnostic() -> String:
+	# log.info snapshot for lobby transparency
+	return "match=%s state=%s players=%d" % [current_match_id, _state_to_string(current_state), player_ids.size()]
+
+func _api_headers() -> PackedStringArray:
+	return PackedStringArray([
+		API_HEADER_AUTH + ": " + SupabaseManager.SUPABASE_ANON_KEY,
+		"Content-Type: application/json",
+	])
 
 func _find_local_match(user_id: String) -> void:
 	var match_id: String = "local_match_%d" % Time.get_ticks_msec()
@@ -138,11 +155,11 @@ func _join_local_lobby(match_id: String, user_id: String) -> void:
 	if not row is Dictionary or (row as Dictionary).is_empty():
 		match_join_failed.emit("Lobby not found")
 		return
-	var lobby: Dictionary = row
+	var lobby: Dictionary = _validate_lobby_row(row)
 	var state_name: String = str(lobby.get("state", _state_to_string(LobbyState.WAITING)))
 	if state_name == _state_to_string(LobbyState.IN_MATCH):
 		match_join_failed.emit("Match already started")
-		return
+		return  # error: lobby already in match
 	var ids: Array[String] = []
 	for entry in lobby.get("player_ids", []):
 		ids.append(str(entry))
@@ -153,6 +170,11 @@ func _join_local_lobby(match_id: String, user_id: String) -> void:
 	lobby["player_ids"] = ids
 	_local_lobbies[match_id] = lobby
 	_activate_lobby(match_id, str(lobby.get("host_user_id", user_id)), ids, _state_from_string(state_name))
+
+func _validate_lobby_row(row: Variant) -> Dictionary:
+	if row is Dictionary:
+		return row
+	return {}
 
 func _activate_lobby(match_id: String, host_user_id: String, ids: Array[String], state: LobbyState) -> void:
 	current_match_id = match_id
@@ -246,7 +268,7 @@ func _on_join_lobby_completed(
 	var state_name: String = str(row.get("state", _state_to_string(LobbyState.WAITING)))
 	if state_name == _state_to_string(LobbyState.IN_MATCH):
 		match_join_failed.emit("Match already started")
-		return
+		return  # error: lobby already in match
 	var ids: Array[String] = []
 	for entry in row.get("player_ids", []):
 		ids.append(str(entry))

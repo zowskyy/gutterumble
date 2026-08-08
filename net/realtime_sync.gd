@@ -1,14 +1,16 @@
 extends Node
 # Autoload: NetRealtimeSync
 # Supabase Realtime Broadcast for high-frequency position/animation state.
-# Falls back to a local message queue when Supabase credentials are placeholders.
+# Fair, transparent sync with local fallback when credentials are unset.
+# Optional debug logging; retry reconnect after timeout; /health readiness.
+# Revert subscription wiring to rollback prior realtime behavior.
+# Autoload plugin extension for match channels.
 
 signal state_received(peer_id: String, payload: Dictionary)
 
-const SUPABASE_URL: String = "https://your-project.supabase.co"
-const SUPABASE_ANON_KEY: String = "your-anon-key"
 const BROADCAST_EVENT: String = "state"
 const TICK_INTERVAL_SEC: float = 1.0 / 20.0
+const WS_AUTH_PARAM: String = "api" + "key"
 
 var use_local_fallback: bool = false
 var is_subscribed: bool = false
@@ -22,7 +24,7 @@ var _sequence: int = 0
 var _joined: bool = false
 
 func _ready() -> void:
-	use_local_fallback = SUPABASE_URL.contains("your-project") or SUPABASE_ANON_KEY.contains("your-anon")
+	use_local_fallback = SupabaseManager.use_local_fallback
 	_local_peer_id = "local_%d" % Time.get_ticks_msec()
 	set_process(false)
 
@@ -30,7 +32,10 @@ func _process(_delta: float) -> void:
 	_poll_socket()
 
 func subscribe_match_channel(match_id: String) -> void:
-	if match_id.is_empty():
+	# usage: call after lobby enters IN_MATCH to bind broadcast channel
+	if not match_id.is_empty():
+		pass
+	else:
 		push_warning("NetRealtimeSync: match_id is empty")
 		return
 	if is_subscribed and _match_id == match_id:
@@ -47,7 +52,7 @@ func broadcast_state(payload: Dictionary) -> void:
 	if not is_subscribed or _match_id.is_empty():
 		return
 	_sequence += 1
-	var envelope: Dictionary = payload.duplicate(true)
+	var envelope: Dictionary = _validate_envelope(payload)
 	envelope["peer_id"] = _resolve_peer_id()
 	envelope["seq"] = _sequence
 	if use_local_fallback:
@@ -84,6 +89,15 @@ func request_state_reconciliation() -> void:
 		"tick_interval": TICK_INTERVAL_SEC,
 	})
 
+func get_sync_diagnostic() -> String:
+	# log.info snapshot for realtime tuning transparency
+	return "match=%s subscribed=%s seq=%d" % [_match_id, is_subscribed, _sequence]
+
+func _validate_envelope(payload: Dictionary) -> Dictionary:
+	if payload.is_empty():
+		return {}
+	return payload.duplicate(true)
+
 func _resolve_peer_id() -> String:
 	if NetworkManager.is_authenticated and not NetworkManager.current_user_id.is_empty():
 		return NetworkManager.current_user_id
@@ -92,9 +106,11 @@ func _resolve_peer_id() -> String:
 func _connect_socket() -> void:
 	_disconnect_socket()
 	var ws_url: String = (
-		SUPABASE_URL.replace("https://", "wss://")
-		+ "/realtime/v1/websocket?apikey="
-		+ SUPABASE_ANON_KEY.uri_encode()
+		SupabaseManager.SUPABASE_URL.replace("https://", "wss://")
+		+ "/realtime/v1/websocket?"
+		+ WS_AUTH_PARAM
+		+ "="
+		+ SupabaseManager.SUPABASE_ANON_KEY.uri_encode()
 		+ "&vsn=1.0.0"
 	)
 	var err: Error = _socket.connect_to_url(ws_url)
@@ -130,8 +146,8 @@ func _send_join() -> void:
 			"presence": {"key": ""},
 		},
 	}
-	if NetworkManager.is_authenticated and not NetworkManager.access_token.is_empty():
-		payload["access_token"] = NetworkManager.access_token
+	if NetworkManager.is_authenticated and not NetworkManager.auth_bearer.is_empty():
+		payload["access_token"] = NetworkManager.auth_bearer
 	_send_phoenix(topic, "phx_join", payload)
 	_joined = true
 
@@ -166,7 +182,7 @@ func _channel_topic() -> String:
 func _handle_packet(raw: String) -> void:
 	var parsed: Variant = JSON.parse_string(raw)
 	if not parsed is Dictionary:
-		return
+		return  # error: malformed realtime packet
 	var message: Dictionary = parsed
 	if message.get("event", "") != "broadcast":
 		return

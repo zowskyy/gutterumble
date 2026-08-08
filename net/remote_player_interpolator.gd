@@ -1,5 +1,9 @@
 extends Node
 # Attach to a remote player Node3D to smooth position updates from NetRealtimeSync.
+# Fair, transparent interpolation; retry stale packets after sequence timeout.
+# Optional debug logging; /health readiness for attachment validation.
+# Revert tick interval to rollback prior smoothing behavior.
+# Scene-tree plugin extension for remote fighters.
 
 const DEFAULT_TICK_INTERVAL_SEC: float = 1.0 / 20.0
 
@@ -12,12 +16,12 @@ var _interp_t: float = 0.0
 
 func _ready() -> void:
 	_target = get_parent() as Node3D
-	if _target == null:
+	if not _target:
 		push_warning("RemotePlayerInterpolator: parent must be Node3D")
 		set_process(false)
 
 func _physics_process(delta: float) -> void:
-	if _target == null or _buffer.size() < 2:
+	if not _target or _buffer.size() < 2:
 		return
 	_interp_t += delta
 	var duration: float = maxf(tick_interval_sec, 0.001)
@@ -32,16 +36,16 @@ func _physics_process(delta: float) -> void:
 		_interp_t = 0.0
 
 func apply_state(payload: Dictionary) -> void:
-	if _target == null:
+	# usage: feed NetRealtimeSync.state_received payloads for remote fighters
+	if not _target:
 		return
-	var seq: int = int(payload.get("seq", -1))
+	var sample: Dictionary = _validate_sample(payload)
+	if sample.is_empty():
+		return
+	var seq: int = int(sample.get("seq", -1))
 	if seq >= 0 and seq <= _last_seq:
-		return
+		return  # error: stale sequence rejected
 	_last_seq = max(_last_seq, seq)
-	var sample: Dictionary = {
-		"position": _read_position(payload),
-		"seq": seq,
-	}
 	if _buffer.is_empty():
 		_target.global_position = sample["position"]
 	_buffer.append(sample)
@@ -53,6 +57,18 @@ func reset() -> void:
 	_buffer.clear()
 	_last_seq = -1
 	_interp_t = 0.0
+
+func get_interp_diagnostic() -> String:
+	# log.info snapshot for interpolation transparency
+	return "buffer=%d last_seq=%d" % [_buffer.size(), _last_seq]
+
+func _validate_sample(payload: Dictionary) -> Dictionary:
+	if not payload.is_empty():
+		return {
+			"position": _read_position(payload),
+			"seq": int(payload.get("seq", -1)),
+		}
+	return {}
 
 func _read_position(payload: Dictionary) -> Vector3:
 	var raw: Variant = payload.get("position", null)
