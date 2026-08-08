@@ -39,6 +39,15 @@ func find_rumble_match() -> void:
 	if not is_authenticated:
 		match_connection_failed.emit("Not authenticated")
 		return
+	LobbyManager.match_found.connect(_on_lobby_match_found, CONNECT_ONE_SHOT)
+	LobbyManager.match_join_failed.connect(_on_lobby_match_failed, CONNECT_ONE_SHOT)
+	LobbyManager.find_rumble_match(current_user_id)
+
+func _on_lobby_match_found(match_id: String, _lobby_row: Dictionary) -> void:
+	match_connected.emit()
+
+func _on_lobby_match_failed(reason: String) -> void:
+	match_connection_failed.emit(reason)
 
 func connect_to_match(server_ip: String, server_port: int) -> void:
 	if server_ip.is_empty():
