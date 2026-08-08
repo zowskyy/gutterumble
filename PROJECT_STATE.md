@@ -1,11 +1,26 @@
 # GutterRumble — Project State
-_Last updated: 2026-07-28_
+_Last updated: 2026-08-08_
 
 ## Current snapshot
 
 BUILD_GUIDE_10X.md's 10 slices are all implemented, committed, and passing the
 Godot CI headless workflow (`.github/workflows/godot-ci.yml`). Project targets
 Godot 4.7 (mobile renderer, per `project.godot`).
+
+Recent additions on `main` (through Aug 2026):
+
+- **Arena select** — `scenes/arena_select/` lets 1v1 RUMBLE pick Back Alley or
+  Rooftop before fighting (GANG WARS still routes straight to rooftop Warriors
+  mode).
+- **Local backend fallback** — `SupabaseManager` auto-falls back to
+  `backend/local_profile_store.gd` (`user://gutterumble_local/`) when Supabase
+  credentials are missing; match results logged via `log_match()`.
+- **Release audit script** — `scripts/release-audit.sh` checks README claims,
+  TODOs, and stub modules before a release tag.
+- **Menu mascot** — skeleton idle sprite on main menu (`skeleton_mascot.gd`),
+  cursor-facing flip.
+- **UAL animation pack** — Quaternius Universal Animation Library[Standard] at
+  project root; combat clips not yet retargeted onto `mouse.glb` (see Blocked).
 
 ## What exists and works
 
@@ -22,8 +37,8 @@ Godot 4.7 (mobile renderer, per `project.godot`).
 - `rumble_arena_back_alley.gd` — shared match-manager script, reused as-is
   by BOTH arenas (see below) — no back-alley-specific coupling
 - Two arenas: back alley (classic 1v1) and rooftop (Warriors mode, night
-  theme, bigger wave progression). Main menu routes 1v1 RUMBLE → back alley,
-  GANG WARS → rooftop
+  theme, bigger wave progression). Main menu routes 1v1 RUMBLE → arena
+  select → fight; GANG WARS → rooftop Warriors waves
 - Multi-round play actually works now — round 2+ correctly respawns fighters,
   resets AI/combat state, and re-arms Warriors-mode wave spawning (all three
   were silently broken before slice 3's audit)
@@ -39,6 +54,7 @@ Godot 4.7 (mobile renderer, per `project.godot`).
   GangSpawner's doc comment saying "gang vs gang")
 - Crowd barks from off-screen/non-engaged AI (spatial, cooldown-gated)
 - Win-gated gang color/shirt unlocks in the character creator
+- Match results persisted locally (or Supabase when configured) on victory/defeat
 
 ### Autoloads
 `FighterPool`, `GangSpawner`, `PerfLogger`, `CombatFeel`, `AudioManager`,
@@ -51,6 +67,7 @@ Godot 4.7 (mobile renderer, per `project.godot`).
   project, boots the main scene (exercises every autoload), greps the log
   for parse/script errors (Godot doesn't reliably exit non-zero on those),
   then runs `test_spawn_validator.tscn`
+- `.github/workflows/gate-check.yml` — Cursor Gate on `samples/hello_passing.py`
 
 ## Bugs found and fixed during this sprint (not newly introduced — pre-existing)
 
@@ -76,23 +93,31 @@ Godot 4.7 (mobile renderer, per `project.godot`).
 
 | Item | Blocker |
 |------|---------|
-| Real combat animations | `tools/blender_scripts/generate_combat_animations.py` is ready — run once in Blender, re-export `mouse.glb` |
+| Real combat animations | UAL pack is in-repo at `Universal Animation Library[Standard]/`; retarget onto `mouse.glb` per `QUATERNIUS_RETARGET_SETUP.md`. Procedural fallback: `tools/blender_scripts/generate_combat_animations.py` |
 | `fighter_lod.gd` | Exists, never wired — needs actual High/Med/Low mesh variants exported from Blender first (only one quality level currently exists) |
 | Rollback netcode | Needs the Snopek Games addon — Phase 2, separate integration effort |
 | Supabase matchmaking | `find_rumble_match()` in `network_manager.gd` is still a stub |
 | Asset provenance | `mouse.glb` and arena textures have no documented source — see `CREDITS.md` action item before any public release |
+| Remaining 4 arenas | subway, warehouse, parking garage, burning lot — see `BUILD_GUIDE.md` Phase 3 |
 
 ## Key file paths
 ```
 autoloads/fighter_pool.gd, gang_spawner.gd, perf_logger.gd, combat_feel.gd,
   audio_manager.gd, round_manager.gd, save_manager.gd, vfx_pool.gd,
   animation_tree_builder.gd, special_meter.gd
+scenes/arena_select/arena_select.gd
 scenes/vfx/attack_trail.gd
+scenes/main_menu/skeleton_mascot.gd
+backend/local_profile_store.gd, supabase_manager.gd
 scenes/arenas/back_alley/rumble_arena_back_alley.gd  (shared by both arenas)
 scenes/arenas/back_alley/arena_camera.gd             (shared by both arenas)
 scenes/arenas/rooftop/rumble_arena_rooftop.tscn
 scenes/character_creator/character_creator.gd
+Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb
 tools/blender_scripts/generate_combat_animations.py
+tools/blender_scripts/generate_character_rig.py
+scripts/release-audit.sh
 .github/workflows/godot-ci.yml
 BUILD_GUIDE_10X.md  — slice-by-slice log of what was built and why
+BUILD_GUIDE.md      — full roadmap (6 arenas, progression, launch polish)
 ```
