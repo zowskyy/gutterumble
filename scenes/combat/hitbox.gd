@@ -13,12 +13,22 @@ signal hit_landed(target: Node3D, hurtbox: Area3D)
 
 var _hit_this_swing: Dictionary = {}
 var _active_frames_remaining: int = 0
+var _overlap_scan_remaining: int = 0
 var _collision_shape: CollisionShape3D
 
 func _ready() -> void:
-	_collision_shape = get_node_or_null("CollisionShape3D") as CollisionShape3D
+	_collision_shape = _find_collision_shape()
 	monitoring = false
 	area_entered.connect(_on_area_entered)
+
+func _find_collision_shape() -> CollisionShape3D:
+	var named := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if named:
+		return named
+	for child in get_children():
+		if child is CollisionShape3D:
+			return child as CollisionShape3D
+	return null
 
 func set_active_frames(frame_count: int) -> void:
 	active_physics_frames = maxi(3, frame_count)
@@ -29,14 +39,22 @@ func begin_swing(_damage: float, _knockback: float) -> void:
 	monitoring = true
 	if _collision_shape:
 		_collision_shape.disabled = false
+	# area_entered does not fire for overlaps that already exist when monitoring
+	# turns on — rescan for two physics ticks while the server syncs transforms.
+	_overlap_scan_remaining = 2
 
 func end_swing() -> void:
 	_active_frames_remaining = 0
+	_overlap_scan_remaining = 0
 	monitoring = false
 	if _collision_shape:
 		_collision_shape.disabled = true
 
 func _physics_process(_delta: float) -> void:
+	if _overlap_scan_remaining > 0:
+		_overlap_scan_remaining -= 1
+		for area: Area3D in get_overlapping_areas():
+			_on_area_entered(area)
 	if _active_frames_remaining <= 0:
 		return
 	_active_frames_remaining -= 1

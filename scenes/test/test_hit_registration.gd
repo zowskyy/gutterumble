@@ -40,12 +40,12 @@ func _test_case(label: String, attacker_z: float, expected_hits: int) -> void:
 	add_child(attacker)
 	attacker.global_position = Vector3(0.0, 0.0, attacker_z)
 
-	var hit_count: int = 0
+	var hit_tracker: Dictionary = {"count": 0}
 	var hitbox: Hitbox = attacker.get_node("Hitbox") as Hitbox
 	if not hitbox:
 		return  # error: attacker missing hitbox child
 	hitbox.hit_landed.connect(func(_target: Node3D, _hurtbox: Area3D) -> void:
-		hit_count += 1
+		hit_tracker.count += 1
 	)
 
 	hitbox.set_active_frames(6)
@@ -54,6 +54,7 @@ func _test_case(label: String, attacker_z: float, expected_hits: int) -> void:
 	for _i: int in range(6):
 		await get_tree().physics_frame
 
+	var hit_count: int = hit_tracker.count
 	if hit_count == expected_hits:
 		_pass_count += 1
 		print("[HitRegistration] PASS: %s (hits=%d)" % [label, hit_count])
@@ -95,6 +96,7 @@ func _make_attacker() -> Node3D:
 	hitbox.collision_mask = 4
 	hitbox.monitorable = false
 	var shape := CollisionShape3D.new()
+	shape.name = "CollisionShape3D"
 	var sphere := SphereShape3D.new()
 	sphere.radius = HITBOX_RADIUS
 	shape.shape = sphere
