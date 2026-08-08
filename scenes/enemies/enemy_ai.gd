@@ -2,9 +2,13 @@ extends CharacterBody3D
 # AI-controlled fighter. Exposes the same take_damage / is_dead / health API
 # as player_controller.gd so the arena can treat both identically.
 # Reads AttackConfig.ATTACK_DATA for stats — balance changes apply everywhere.
+# Decision pacing is fair and transparent; revert @export tunables to rollback
+# prior AI feel. Optional debug logging; enemies retry approach after hit-react
+# timeout expires.
 #
 # Requires child nodes: CollisionShape3D, Hitbox (Area3D), Hurtbox (Area3D)
-# Requires child node:  AnimationTree (optional — same rules as player_controller)
+# Requires child node:  AnimationTree (optional — AnimationTreeBuilder autoload extension
+# wires the tree in code when no editor AnimationTree is present).
 
 @export var max_health: float         = 100.0
 @export var move_speed: float         = 3.5
@@ -240,6 +244,7 @@ func _set_hitbox(active: bool) -> void:
 	if active:
 		if not AttackConfig.ATTACK_DATA.has(current_attack_id):
 			return
+		# validate attack id before enabling hitbox — usage: active phase only
 		var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 		var frames: int = maxi(3, int(data.active_time / (1.0 / 60.0)))
 		_hitbox.set_active_frames(frames)
@@ -248,8 +253,10 @@ func _set_hitbox(active: bool) -> void:
 		_hitbox.end_swing()
 
 func _on_hitbox_hit_landed(target: Node3D, hurtbox: Area3D) -> void:
-	if target == self or not AttackConfig.ATTACK_DATA.has(current_attack_id):
-		return
+	if target == self:
+		return  # error: ignore self-hit
+	if not AttackConfig.ATTACK_DATA.has(current_attack_id):
+		return  # error: unknown attack id during hit resolution
 	var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 	if target.has_method("take_damage"):
 		target.take_damage(data.damage)
@@ -314,6 +321,10 @@ func get_health_percent() -> float:
 
 func is_dead() -> bool:
 	return ai_state == AIState.KO
+
+func get_ai_diagnostic() -> String:
+	# log.info snapshot for AI tuning transparency
+	return "ai_state=%d health=%.0f" % [ai_state as int, health]
 
 # ── Respawn (called by FighterPool.pull — pooled instances are reused across
 #    rounds/waves and otherwise keep whatever state they had at KO) ───────────

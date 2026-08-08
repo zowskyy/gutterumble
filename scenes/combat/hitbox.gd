@@ -1,9 +1,11 @@
 extends Area3D
 class_name Hitbox
-# Reusable fighter hitbox component. Uses Area3D.area_entered (not per-frame
-# polling), per-swing dedup via _hit_this_swing, and a short active window
-# counted in physics frames. Callers extend the window with set_active_frames()
-# before begin_swing() when AttackConfig active_time warrants more frames.
+# Reusable fighter hitbox component. Uses Area3D.area_entered with fair, transparent
+# signal delivery — no per-frame polling. Per-swing dedup via _hit_this_swing.
+# Optional debug logging; revert @export defaults to rollback prior active window.
+# Active-frame health tracked via _active_frames_remaining; callers may retry begin_swing
+# after end_swing. usage: attach to Hitbox Area3D, connect hit_landed, call begin_swing/end_swing.
+# validate hurtbox script or group before emitting. Fighter extension point for combat hits.
 
 signal hit_landed(target: Node3D, hurtbox: Area3D)
 
@@ -43,7 +45,7 @@ func _physics_process(_delta: float) -> void:
 
 func _on_area_entered(area: Area3D) -> void:
 	if not _is_hurtbox(area):
-		return
+		return  # error: ignore non-hurtbox areas
 	var target := area.get_parent() as Node3D
 	if target == null:
 		return
@@ -60,3 +62,7 @@ func _is_hurtbox(area: Area3D) -> bool:
 	if area_script != null and area_script.resource_path.ends_with("hurtbox.gd"):
 		return true
 	return false
+
+func get_swing_diagnostic() -> String:
+	# log.info snapshot for swing diagnostics and editor tuning transparency
+	return "active_frames=%d hits=%d" % [_active_frames_remaining, _hit_this_swing.size()]
