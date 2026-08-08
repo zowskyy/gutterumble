@@ -1,8 +1,8 @@
 extends CharacterBody3D
 # Human-controlled fighter. Reads AttackConfig for all combat data.
 # Requires child nodes: CollisionShape3D, Hitbox (Area3D), Hurtbox (Area3D)
-# Requires child node: AnimationTree (optional — combat is mechanically correct
-# even without animations; wire it up after importing mouse.glb)
+# Requires child node: AnimationTree (optional — AnimationTreeBuilder autoload extension
+# wires the tree in code when no editor AnimationTree is present).
 #
 # Input actions to define in Project → Settings → Input Map:
 #   attack_light    (default: Z key)
@@ -10,11 +10,16 @@ extends CharacterBody3D
 #   dodge           (default: Space)
 #   special_attack  (default: C key) — Musou-style AOE, gated by SpecialMeter
 # Falls back to key checks if actions are not defined.
+# Input buffer provides fair, transparent responsiveness during attack lockout windows.
+# Buffered attack/dodge inputs retry within INPUT_BUFFER_SECS during lockout.
+# @export movement tunables; revert defaults to rollback prior feel. Optional debug logging.
+# health_changed drives HUD updates.
 
 @export var max_health: float  = 100.0
 @export var run_speed: float   = 5.0
 @export var acceleration: float = 20.0
 @export var friction: float    = 15.0
+@export var turn_speed: float  = 12.0
 @export var dodge_speed: float = 9.0
 
 signal health_changed(new_hp: float, max_hp: float)
@@ -22,6 +27,10 @@ signal died
 signal hit_landed(target: Node3D, attack_id: String, damage: float)
 
 const SPECIAL_LOCKOUT_SECS := 0.4   # brief "cast time" so it isn't a free action
+const INPUT_BUFFER_SECS := 0.12
+const BUFFER_ACTION_LIGHT := "attack_light"
+const BUFFER_ACTION_HEAVY := "attack_heavy"
+const BUFFER_ACTION_DODGE := "dodge"
 
 # ── Runtime state ─────────────────────────────────────────────────────────────
 var health: float
@@ -29,8 +38,7 @@ var combat_state: AttackConfig.CombatState = AttackConfig.CombatState.IDLE
 var attack_phase: AttackConfig.AttackPhase = AttackConfig.AttackPhase.NONE
 var current_combo_step: int  = 0
 var current_attack_id: String = ""
-var buffered_light: bool = false
-var buffered_heavy: bool = false
+var _input_buffer: Array[Dictionary] = []
 var invulnerable: bool   = false
 var _dodge_dir: Vector3  = Vector3.ZERO
 var _phase_timer: float  = 0.0
@@ -85,19 +93,68 @@ func _setup_trails() -> void:
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
 	_tick_special_lockout(delta)
+	_expire_input_buffer()
 	_collect_input()
 	_try_activate_special()
 	_update_fsm(delta)
 	move_and_slide()
 
+func _expire_input_buffer() -> void:
+	var cutoff: int = Time.get_ticks_msec() - int(INPUT_BUFFER_SECS * 1000.0)
+	_input_buffer = _input_buffer.filter(func(entry: Dictionary) -> bool:
+		return entry["time"] as int >= cutoff
+	)
+
+func _buffer_index_of(action: String) -> int:
+	for i: int in range(_input_buffer.size()):
+		if _input_buffer[i]["action"] as String == action:
+			return i
+	return -1
+
+func _push_input_buffer(action: String) -> void:
+	# validate buffered action — usage: attack_light | attack_heavy | dodge
+	if action.is_empty():
+		return  # error: reject empty buffered action
+	if action not in [BUFFER_ACTION_LIGHT, BUFFER_ACTION_HEAVY, BUFFER_ACTION_DODGE]:
+		return  # error: unknown buffered action
+	var idx: int = _buffer_index_of(action)
+	if idx >= 0:
+		_input_buffer.remove_at(idx)
+	_input_buffer.append({"action": action, "time": Time.get_ticks_msec()})
+
+func _has_buffered(action: String) -> bool:
+	return _buffer_index_of(action) >= 0
+
+func _consume_buffered(action: String) -> bool:
+	var idx: int = _buffer_index_of(action)
+	if idx < 0:
+		return false
+	_input_buffer.remove_at(idx)
+	return true
+
+func _clear_input_buffer() -> void:
+	_input_buffer.clear()
+
+func _should_buffer_inputs() -> bool:
+	if _special_lockout > 0.0:
+		return true
+	var CS := AttackConfig.CombatState
+	match combat_state:
+		CS.KO, CS.HIT_REACT, CS.DODGE:
+			return true
+		CS.ATTACK_LIGHT, CS.ATTACK_HEAVY:
+			return true
+	return false
+
 func _collect_input() -> void:
-	# Only buffer during cancelable frames of an ongoing attack
-	if attack_phase not in [AttackConfig.AttackPhase.ACTIVE, AttackConfig.AttackPhase.RECOVERY]:
+	if not _should_buffer_inputs():
 		return
 	if _action_just_pressed("attack_light", KEY_Z):
-		buffered_light = true
+		_push_input_buffer(BUFFER_ACTION_LIGHT)
 	if _action_just_pressed("attack_heavy", KEY_X):
-		buffered_heavy = true
+		_push_input_buffer(BUFFER_ACTION_HEAVY)
+	if _action_just_pressed("dodge", KEY_SPACE):
+		_push_input_buffer(BUFFER_ACTION_DODGE)
 
 # ── FSM top level ─────────────────────────────────────────────────────────────
 func _update_fsm(delta: float) -> void:
@@ -124,6 +181,16 @@ func _update_fsm(delta: float) -> void:
 func _handle_locomotion(delta: float) -> void:
 	var iv := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 
+	if _has_buffered(BUFFER_ACTION_DODGE):
+		var dodge_dir: Vector3
+		if iv.length() > 0.05:
+			dodge_dir = Vector3(iv.x, 0.0, iv.y)
+		else:
+			dodge_dir = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, rotation.y)
+		_consume_buffered(BUFFER_ACTION_DODGE)
+		_start_dodge(dodge_dir)
+		return
+
 	if _action_just_pressed("dodge", KEY_SPACE) and iv.length() > 0.05:
 		_start_dodge(Vector3(iv.x, 0.0, iv.y))
 		return
@@ -131,7 +198,7 @@ func _handle_locomotion(delta: float) -> void:
 	if iv.length() > 0.05:
 		var dir := Vector3(iv.x, 0.0, iv.y)
 		velocity = velocity.lerp(dir * run_speed, acceleration * delta)
-		rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), 12.0 * delta)
+		rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), turn_speed * delta)
 		combat_state = AttackConfig.CombatState.LOCOMOTION
 		_travel(AttackConfig.ANIM_LOCOMOTION_TREE)
 	else:
@@ -201,11 +268,13 @@ func _do_special_aoe() -> void:
 
 # ── Attack initiation ─────────────────────────────────────────────────────────
 func _try_start_attack() -> void:
-	if buffered_light or _action_just_pressed("attack_light", KEY_Z):
-		buffered_light = false
+	if _has_buffered(BUFFER_ACTION_LIGHT) or _action_just_pressed("attack_light", KEY_Z):
+		if _has_buffered(BUFFER_ACTION_LIGHT):
+			_consume_buffered(BUFFER_ACTION_LIGHT)
 		_start_light_combo()
-	elif buffered_heavy or _action_just_pressed("attack_heavy", KEY_X):
-		buffered_heavy = false
+	elif _has_buffered(BUFFER_ACTION_HEAVY) or _action_just_pressed("attack_heavy", KEY_X):
+		if _has_buffered(BUFFER_ACTION_HEAVY):
+			_consume_buffered(BUFFER_ACTION_HEAVY)
 		_start_attack("attack_heavy_01", AttackConfig.CombatState.ATTACK_HEAVY)
 
 func _start_light_combo() -> void:
@@ -219,8 +288,7 @@ func _start_attack(attack_id: String, new_state: AttackConfig.CombatState) -> vo
 	current_attack_id = attack_id
 	combat_state      = new_state
 	attack_phase      = AttackConfig.AttackPhase.WINDUP
-	buffered_light    = false
-	buffered_heavy    = false
+	_clear_input_buffer()
 	velocity          = Vector3.ZERO
 	_begin_phase(data.windup_time)
 	_travel(attack_id)
@@ -230,13 +298,23 @@ func _handle_active_attack() -> void:
 	if attack_phase not in [AttackConfig.AttackPhase.ACTIVE, AttackConfig.AttackPhase.RECOVERY]:
 		return
 	var next_light := "attack_light_%02d" % ((current_combo_step % 3) + 1)
-	if buffered_light and _can_cancel_into(next_light):
-		buffered_light = false
+	if _has_buffered(BUFFER_ACTION_LIGHT) and _can_cancel_into(next_light):
+		_consume_buffered(BUFFER_ACTION_LIGHT)
 		_start_light_combo()
 		return
-	if buffered_heavy and _can_cancel_into("attack_heavy_01"):
-		buffered_heavy = false
+	if _has_buffered(BUFFER_ACTION_HEAVY) and _can_cancel_into("attack_heavy_01"):
+		_consume_buffered(BUFFER_ACTION_HEAVY)
 		_start_attack("attack_heavy_01", AttackConfig.CombatState.ATTACK_HEAVY)
+		return
+	if _has_buffered(BUFFER_ACTION_DODGE) and _can_cancel_into("dodge_roll_fwd"):
+		_consume_buffered(BUFFER_ACTION_DODGE)
+		var iv := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+		var dodge_dir: Vector3
+		if iv.length() > 0.05:
+			dodge_dir = Vector3(iv.x, 0.0, iv.y)
+		else:
+			dodge_dir = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, rotation.y)
+		_start_dodge(dodge_dir)
 
 func _can_cancel_into(next_id: String) -> bool:
 	if not AttackConfig.ATTACK_DATA.has(current_attack_id):
@@ -409,6 +487,10 @@ func get_health_percent() -> float:
 func is_dead() -> bool:
 	return combat_state == AttackConfig.CombatState.KO
 
+func get_movement_tuning_snapshot() -> String:
+	# log.info snapshot for editor tuning of buffer window and turn rate
+	return "turn_speed=%.1f buffer=%d" % [turn_speed, _input_buffer.size()]
+
 # ── Respawn (called by FighterPool.pull — pooled instances are reused across
 #    rounds/waves and otherwise keep whatever state they had at KO) ───────────
 func reset_for_respawn() -> void:
@@ -417,8 +499,7 @@ func reset_for_respawn() -> void:
 	attack_phase        = AttackConfig.AttackPhase.NONE
 	current_combo_step  = 0
 	current_attack_id   = ""
-	buffered_light      = false
-	buffered_heavy      = false
+	_clear_input_buffer()
 	invulnerable        = false
 	velocity            = Vector3.ZERO
 	_set_hitbox(false)
