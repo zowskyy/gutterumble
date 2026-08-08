@@ -14,7 +14,7 @@ on:
 jobs:
   headless-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -25,35 +25,28 @@ jobs:
           use-dotnet: false
 
       - name: Import project
-        # .import files are gitignored (per-asset editor settings aren't
-        # committed) — a fresh checkout has no .godot/ cache at all, so this
-        # step regenerates it from scratch and surfaces any resource load
-        # failure before scripts are exercised.
         run: godot --headless --path . --import
 
       - name: Boot main scene (autoload + parse-error smoke test)
-        # Every autoload (FighterPool, CombatFeel, AudioManager, RoundManager,
-        # SaveManager, SpecialMeter, GangSpawner, VFXPool, AnimationTreeBuilder,
-        # etc.) loads on ANY scene run, so this alone catches parse/reference
-        # errors across the whole autoload layer, not just the main menu.
-        # --quit-after N is a FRAME count, not seconds — 60 frames runs the
-        # scene for ~1s at 60fps then exits cleanly on its own.
-        #
-        # Godot does NOT reliably return a non-zero exit code when a script
-        # fails to parse (a broken autoload can fail silently and the
-        # process still exits 0) — grep the captured output for error
-        # markers instead of trusting the exit code alone.
         run: |
           godot --headless --path . res://scenes/main_menu/main_menu.tscn --quit-after 60 \
             2>&1 | tee godot_boot.log || true
           ! grep -qE "SCRIPT ERROR|Parse Error|Invalid (call|assignment|get index)" godot_boot.log
 
-      - name: Run spawn validator
-        # Checks fighter height (0.5-3m — catches the exact 0.01-scale bug
-        # from earlier in this project's history), visibility, and
-        # spawn-at-marker accuracy. Non-zero exit fails the job.
-        run: godot --headless --path . res://scenes/test/test_spawn_validator.tscn
-
-      - name: Run hit registration test (Slice 0.2)
-        # Automated edge/center/miss hit counts — non-zero exit fails the job.
-        run: godot --headless --path . res://scenes/test/test_hit_registration.tscn
+      - name: Run headless slice tests
+        run: |
+          set -euo pipefail
+          TESTS=(
+            "res://scenes/test/test_spawn_validator.tscn"
+            "res://scenes/test/test_hit_registration.tscn"
+            "res://scenes/test/test_customization_warmup.tscn"
+            "res://scenes/test/test_match_resolver.tscn"
+            "res://scenes/test/test_match_start.tscn"
+            "res://scenes/test/test_rep_pipeline.tscn"
+            "res://scenes/test/test_shader_warmup.tscn"
+            "res://scenes/test/test_crash_reporter.tscn"
+          )
+          for scene in "${TESTS[@]}"; do
+            echo "=== Running $scene ==="
+            godot --headless --path . "$scene"
+          done

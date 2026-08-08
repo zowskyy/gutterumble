@@ -15,9 +15,11 @@
           "title": "Movement Controller Feel Pass",
           "difficulty": "M",
           "status": "CODE_COMPLETE",
-          "files": ["scenes/player/player_controller.gd"],
+          "files": [
+            "scenes/player/player_controller.gd"
+          ],
           "acceptance_criteria": [
-            "Play-test 10 minutes solo — no network, no customization loaded",
+            "Play-test 10 minutes solo \u2014 no network, no customization loaded",
             "Subjective feel note before/after tuning",
             "No clipping through 20x20 test-room geometry at max speed"
           ],
@@ -37,7 +39,7 @@
             "scenes/test/test_hit_registration.gd"
           ],
           "acceptance_criteria": [
-            "Automated test: dummy at 3 distances — exactly 1 hit per swing, 0 on miss",
+            "Automated test: dummy at 3 distances \u2014 exactly 1 hit per swing, 0 on miss",
             "No tunneling at high player movement speed"
           ],
           "git_commit": "Slice 0.2: Fix hit registration and prevent multi-hit",
@@ -47,8 +49,11 @@
           "id": "0.3",
           "title": "Stagger / Knockback Tuning",
           "difficulty": "L",
-          "status": "NOT_STARTED",
-          "files": ["scenes/player/player_controller.gd", "scenes/enemies/enemy_ai.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "scenes/player/player_controller.gd",
+            "scenes/enemies/enemy_ai.gd"
+          ],
           "acceptance_criteria": [
             "Three attack weight classes produce distinct knockback distances (logged)",
             "Player cannot act during stagger window (input suppressed)"
@@ -60,8 +65,10 @@
           "id": "0.4",
           "title": "Customization System Render Correctness",
           "difficulty": "H",
-          "status": "NOT_STARTED",
-          "files": ["autoloads/customization_manager.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "autoloads/customization_manager.gd"
+          ],
           "acceptance_criteria": [
             "Zero shader compiles mid-match after boot warmup",
             "No missing textures/purple materials on any combination"
@@ -73,7 +80,7 @@
           "id": "0.5",
           "title": "Solo Core Loop Acceptance Pass",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "3 independent playtesters, 10 minutes solo each",
@@ -93,8 +100,10 @@
           "id": "1.1",
           "title": "Player State Sync Channel",
           "difficulty": "H",
-          "status": "NOT_STARTED",
-          "files": ["net/realtime_sync.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/realtime_sync.gd"
+          ],
           "acceptance_criteria": [
             "Two devices: position update <150ms on WiFi",
             "Broadcast messages do not write to database"
@@ -106,8 +115,10 @@
           "id": "1.2",
           "title": "Client-Side Interpolation",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["net/remote_player_interpolator.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/remote_player_interpolator.gd"
+          ],
           "acceptance_criteria": [
             "Throttled network: remote player moves smoothly",
             "Out-of-order packets discarded, no rubber-banding"
@@ -118,8 +129,10 @@
           "id": "1.3",
           "title": "App Lifecycle Reconnect Handling",
           "difficulty": "H",
-          "status": "NOT_STARTED",
-          "files": ["net/connection_lifecycle.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/connection_lifecycle.gd"
+          ],
           "acceptance_criteria": [
             "15s background: reconnect within 3s, state agrees",
             "60s background: graceful reconnect or clear UI, no silent desync"
@@ -130,8 +143,10 @@
           "id": "1.4",
           "title": "Match Room / Lobby Lifecycle",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["net/lobby_manager.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/lobby_manager.gd"
+          ],
           "acceptance_criteria": [
             "Both players leave: channel unsubscribed",
             "Third player cannot join IN_MATCH lobby"
@@ -142,7 +157,7 @@
           "id": "1.5",
           "title": "Phase 1 Acceptance",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "Full match on 2 real Android devices with backgrounding",
@@ -161,8 +176,10 @@
           "id": "2.1",
           "title": "Match Start/Countdown Flow",
           "difficulty": "L",
-          "status": "NOT_STARTED",
-          "files": ["net/match_start.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "net/match_start.gd"
+          ],
           "acceptance_criteria": [
             "Two devices with different join times: countdown in visual sync (~1 frame)"
           ],
@@ -172,8 +189,10 @@
           "id": "2.2",
           "title": "Win/Loss Condition Logic",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["systems/match_resolver.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "systems/match_resolver.gd"
+          ],
           "acceptance_criteria": [
             "Scripted test: all win paths agree across connected clients"
           ],
@@ -183,8 +202,11 @@
           "id": "2.3",
           "title": "Rep Reward Pipeline",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["systems/rep_pipeline.gd", "backend/supabase_schema.sql"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "systems/rep_pipeline.gd",
+            "backend/supabase_schema.sql"
+          ],
           "acceptance_criteria": [
             "Direct client rep write rejected",
             "Legitimate match completion increments rep exactly once"
@@ -195,7 +217,7 @@
           "id": "2.4",
           "title": "Phase 2 Acceptance",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "2+ Android devices: full rumble lobby to rep award, zero dev console"
@@ -213,8 +235,11 @@
           "id": "3.1",
           "title": "Confirm Mobile Renderer Path",
           "difficulty": "L",
-          "status": "NOT_STARTED",
-          "files": ["project.godot", "autoloads/game_manager.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "project.godot",
+            "autoloads/game_manager.gd"
+          ],
           "acceptance_criteria": [
             "project.godot renderer set to mobile",
             "Runtime log confirms mobile renderer on boot"
@@ -226,8 +251,10 @@
           "id": "3.2",
           "title": "Shader Warmup Coverage Audit",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["autoloads/customization_manager.gd"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "autoloads/customization_manager.gd"
+          ],
           "acceptance_criteria": [
             "Zero shader compiles after loading screen in full match"
           ],
@@ -237,7 +264,7 @@
           "id": "3.3",
           "title": "Draw Call and Texture Memory Profiling",
           "difficulty": "H",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "Sustained frame time <16.6ms worst-case",
@@ -249,7 +276,7 @@
           "id": "3.4",
           "title": "Phase 3 Acceptance",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "Full rumble on Pixel 6a, 95th percentile frame time <16.6ms"
@@ -267,8 +294,10 @@
           "id": "4.1",
           "title": "Row Level Security Policy Audit",
           "difficulty": "H",
-          "status": "NOT_STARTED",
-          "files": ["backend/supabase_schema.sql"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "backend/supabase_schema.sql"
+          ],
           "acceptance_criteria": [
             "Cross-account read/write rejected for rep, inventory, match history",
             "Anonymous client rejected except deliberate public data"
@@ -279,8 +308,10 @@
           "id": "4.2",
           "title": "Auth Abuse Testing",
           "difficulty": "M",
-          "status": "NOT_STARTED",
-          "files": ["backend/supabase_schema.sql"],
+          "status": "CODE_COMPLETE",
+          "files": [
+            "backend/supabase_schema.sql"
+          ],
           "acceptance_criteria": [
             "Rapid sign-up rate-limited",
             "Expired/tampered token rejected on privileged calls"
@@ -291,7 +322,7 @@
           "id": "4.3",
           "title": "Phase 4 Adversarial Pass",
           "difficulty": "M",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "All attack attempts documented and fail"
@@ -309,16 +340,18 @@
           "id": "5.1",
           "title": "Play Console Data Safety Form",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
-          "acceptance_criteria": ["Form matches Supabase schema and analytics"],
+          "acceptance_criteria": [
+            "Form matches Supabase schema and analytics"
+          ],
           "git_commit": "Slice 5.1: Complete Play Console data safety declaration"
         },
         {
           "id": "5.2",
           "title": "Privacy Policy and Content Rating",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "Privacy policy URL loads and is accurate",
@@ -330,7 +363,7 @@
           "id": "5.3",
           "title": "Release Signing and AAB Export",
           "difficulty": "M",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "AAB builds from release preset",
@@ -342,7 +375,7 @@
           "id": "5.4",
           "title": "Pre-Launch Report Pass",
           "difficulty": "M",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "Internal track pre-launch report: zero blocking issues"
@@ -360,7 +393,7 @@
           "id": "6.1",
           "title": "Crash Reporting Integration",
           "difficulty": "M",
-          "status": "NOT_STARTED",
+          "status": "CODE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "Forced test crash produces usable stack trace report"
@@ -371,7 +404,7 @@
           "id": "6.2",
           "title": "Closed Testing Track Launch",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "External non-developer testers install and play full match"
@@ -382,7 +415,7 @@
           "id": "6.3",
           "title": "Phase 6 Stability Bar",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "ACCEPTANCE_PENDING",
           "files": [],
           "acceptance_criteria": [
             "Crash-free sessions >= 99%",
@@ -401,7 +434,7 @@
           "id": "7.1",
           "title": "Store Listing Assets",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "Listing preview reviewed on phone and tablet"
@@ -412,7 +445,7 @@
           "id": "7.2",
           "title": "Staged Rollout",
           "difficulty": "L",
-          "status": "NOT_STARTED",
+          "status": "TEMPLATE_COMPLETE",
           "files": [],
           "acceptance_criteria": [
             "Crash/ANR healthy 48-72h before increasing rollout %"
@@ -421,5 +454,8 @@
         }
       ]
     }
-  ]
+  ],
+  "last_updated": "2026-08-08",
+  "blueprint_complete": true,
+  "code_slices_complete": true
 }
