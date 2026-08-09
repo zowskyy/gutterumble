@@ -5,6 +5,7 @@
 android/
 export/
 build/
+*.keystore
 
 # OS
 .DS_Store

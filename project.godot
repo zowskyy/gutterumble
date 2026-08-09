@@ -15,8 +15,10 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="GUTTERUMBLE"
+config/description="Street-fighting arena brawler"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.png"
 
 [autoload]
 
