@@ -51,8 +51,8 @@ func _test_fighter_spawns_visible(packed: PackedScene, label: String) -> void:
 
 func _test_spawn_at_marker() -> void:
 	var marker := Marker3D.new()
-	marker.global_position = Vector3(2.0, 0.0, 2.0)
 	add_child(marker)
+	marker.global_position = Vector3(2.0, 0.0, 2.0)
 	var inst: Node3D = FIGHTER_SCENE.instantiate()
 	add_child(inst)
 	inst.global_position = marker.global_position

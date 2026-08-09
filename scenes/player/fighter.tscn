@@ -1,7 +1,7 @@
 [gd_scene load_steps=8 format=3 uid="uid://gutterumble_fighter"]
 
 [ext_resource type="Script" path="res://scenes/player/player_controller.gd" id="1_ctrl"]
-[ext_resource type="PackedScene" uid="uid://dqogyum2gejlr" path="res://assets/characters/mouse/mouse.glb" id="2_glb"]
+[ext_resource type="PackedScene" uid="uid://c433bn12iuvbu" path="res://assets/characters/mouse/mouse.glb" id="2_glb"]
 [ext_resource type="Script" path="res://scenes/combat/hitbox.gd" id="3_hitbox"]
 [ext_resource type="Script" path="res://scenes/combat/hurtbox.gd" id="4_hurtbox"]
 

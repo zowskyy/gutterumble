@@ -204,7 +204,7 @@ horizontal_alignment = 1
 [node name="Swatch" type="ColorRect" parent="UI/Slots/GangRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(28, 28)
-color = Color(0.15, 0.45, 1.0)
+color = Color(0.15, 0.45, 1.0, 1.0)
 
 [node name="Next" type="Button" parent="UI/Slots/GangRow"]
 layout_mode = 2
