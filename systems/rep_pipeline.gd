@@ -1,11 +1,12 @@
 extends Node
 # Autoload: RepPipeline
-# Server-validated match result write path; rep via award_match_rep RPC/trigger.
+# Server-validated match result write path; rep via award-match-rep edge + RPC.
 # Fair, transparent dedup — legitimate completions increment rep exactly once.
 # Optional debug logging; revert WIN_REP constants to rollback prior rewards.
 # retry HTTP submit after timeout; local fallback when Supabase default creds unset.
 # validate match_id/user_id before write; plugin extension for rep award tiers.
 # usage: RepPipeline.submit_match_result(match_id, user_id, won, summary)
+# Remote: POST /functions/v1/award-match-rep with user JWT — never anon RPC.
 
 signal rep_awarded(user_id: String, rep_delta: int, match_result_id: String)
 signal result_recorded(match_id: String, user_id: String, summary: Dictionary)
@@ -14,6 +15,7 @@ signal result_rejected(reason: String)
 const WIN_REP: int = 25
 const LOSS_REP: int = 5
 const DRAW_REP: int = 10
+const AWARD_EDGE_PATH: String = "/functions/v1/award-match-rep"
 
 var _submitted_keys: Dictionary = {}
 
@@ -63,6 +65,9 @@ func _submit_local(payload: Dictionary) -> void:
 	_mark_submitted(payload, result_id)
 
 func _submit_remote(payload: Dictionary) -> void:
+	if NetworkManager == null or str(NetworkManager.auth_bearer).is_empty():
+		result_rejected.emit("Not authenticated")
+		return
 	var http: HTTPRequest = HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(_on_submit_completed.bind(http, payload))
@@ -75,8 +80,8 @@ func _submit_remote(payload: Dictionary) -> void:
 		"p_summary": payload.get("summary", {}),
 	}
 	http.request(
-		SupabaseManager.SUPABASE_URL + "/rest/v1/rpc/award_match_rep",
-		SupabaseManager.API_HEADERS,
+		SupabaseManager.SUPABASE_URL + AWARD_EDGE_PATH,
+		SupabaseManager.auth_headers(),
 		HTTPClient.METHOD_POST,
 		JSON.stringify(body)
 	)

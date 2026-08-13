@@ -1,6 +1,7 @@
--- GUTTERUMBLE Supabase schema (Phase 4 hardened)
+-- GUTTERUMBLE Supabase schema (Command 04 canonical)
 -- Default-deny RLS on every client-exposed table; scope reads/writes to auth.uid().
 -- Service-role edge functions bypass RLS for privileged writes (rep, match results).
+-- Clients never call award_match_rep with anon — use edge function + user JWT.
 
 -- ── Extensions ────────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -24,6 +25,8 @@ CREATE TABLE gangs (
 	created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- appearance JSONB object shape (CustomizationManager / SaveManager):
+--   skin_idx, hair_idx, shirt_idx, pants_idx, shoe_idx, gang_idx, gang_color
 CREATE TABLE characters (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	user_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
@@ -32,8 +35,9 @@ CREATE TABLE characters (
 	health FLOAT DEFAULT 100,
 	level INT DEFAULT 1,
 	rep INT DEFAULT 0 CHECK (rep >= 0),
-	appearance JSONB DEFAULT '[]'::jsonb,
-	created_at TIMESTAMPTZ DEFAULT NOW()
+	appearance JSONB DEFAULT '{}'::jsonb,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	CONSTRAINT characters_appearance_is_object CHECK (jsonb_typeof(appearance) = 'object')
 );
 
 CREATE TABLE matches (
@@ -75,6 +79,19 @@ CREATE TABLE lobby_members (
 	PRIMARY KEY (lobby_id, user_id)
 );
 
+-- Queue rows for matchmaking (not a phantom /matchmaking REST route).
+CREATE TABLE matchmaking_queue (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+	mode VARCHAR NOT NULL DEFAULT 'rumble_coop',
+	region VARCHAR DEFAULT 'global',
+	status VARCHAR NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'matched', 'cancelled', 'expired')),
+	party_id UUID NULL,
+	session_id UUID NULL,
+	queued_at TIMESTAMPTZ DEFAULT NOW(),
+	matched_match_id UUID REFERENCES matches(id) ON DELETE SET NULL
+);
+
 CREATE TABLE appearance_items (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	category VARCHAR NOT NULL,
@@ -94,6 +111,13 @@ CREATE TABLE customization_inventory (
 	UNIQUE (user_id, item_id)
 );
 
+-- Rate limits for award_match_rep (service_role only; no client policies).
+CREATE TABLE award_rep_rate_limits (
+	user_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+	window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	request_count INT NOT NULL DEFAULT 0
+);
+
 -- ── Indexes ───────────────────────────────────────────────────────────────────
 
 CREATE INDEX idx_characters_user_id ON characters(user_id);
@@ -102,6 +126,8 @@ CREATE INDEX idx_match_results_match_id ON match_results(match_id);
 CREATE INDEX idx_lobbies_host_id ON lobbies(host_id);
 CREATE INDEX idx_lobby_members_user_id ON lobby_members(user_id);
 CREATE INDEX idx_customization_inventory_user_id ON customization_inventory(user_id);
+CREATE INDEX idx_matchmaking_queue_status_queued_at ON matchmaking_queue(status, queued_at);
+CREATE INDEX idx_matchmaking_queue_player_id ON matchmaking_queue(player_id);
 
 -- ── Enable RLS (default deny — no policy = no access) ─────────────────────────
 
@@ -112,8 +138,10 @@ ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lobbies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lobby_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matchmaking_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appearance_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customization_inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE award_rep_rate_limits ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE players FORCE ROW LEVEL SECURITY;
 ALTER TABLE gangs FORCE ROW LEVEL SECURITY;
@@ -122,8 +150,10 @@ ALTER TABLE matches FORCE ROW LEVEL SECURITY;
 ALTER TABLE match_results FORCE ROW LEVEL SECURITY;
 ALTER TABLE lobbies FORCE ROW LEVEL SECURITY;
 ALTER TABLE lobby_members FORCE ROW LEVEL SECURITY;
+ALTER TABLE matchmaking_queue FORCE ROW LEVEL SECURITY;
 ALTER TABLE appearance_items FORCE ROW LEVEL SECURITY;
 ALTER TABLE customization_inventory FORCE ROW LEVEL SECURITY;
+ALTER TABLE award_rep_rate_limits FORCE ROW LEVEL SECURITY;
 
 -- ── players ───────────────────────────────────────────────────────────────────
 
@@ -265,6 +295,21 @@ CREATE POLICY lobby_members_delete_self ON lobby_members
 	FOR DELETE TO authenticated
 	USING (user_id = auth.uid());
 
+-- ── matchmaking_queue ─────────────────────────────────────────────────────────
+
+CREATE POLICY matchmaking_queue_select_own ON matchmaking_queue
+	FOR SELECT TO authenticated
+	USING (player_id = auth.uid());
+
+CREATE POLICY matchmaking_queue_insert_own ON matchmaking_queue
+	FOR INSERT TO authenticated
+	WITH CHECK (player_id = auth.uid());
+
+CREATE POLICY matchmaking_queue_update_own ON matchmaking_queue
+	FOR UPDATE TO authenticated
+	USING (player_id = auth.uid())
+	WITH CHECK (player_id = auth.uid());
+
 -- ── appearance_items (public catalog read) ────────────────────────────────────
 
 CREATE POLICY appearance_items_select_public ON appearance_items
@@ -297,7 +342,9 @@ CREATE TRIGGER on_auth_user_created
 	AFTER INSERT ON auth.users
 	FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- ── Phase 2.3: server-validated rep award (trigger concept via RPC) ───────────
+-- ── Single canonical award_match_rep (RepPipeline signature) ──────────────────
+-- Edge Deno wrapper POSTs here with service_role after validating user JWT.
+-- Idempotent: ON CONFLICT (match_id, user_id) DO NOTHING — no double rep apply.
 
 CREATE OR REPLACE FUNCTION public.award_match_rep(
 	p_match_id UUID,
@@ -314,8 +361,46 @@ AS $$
 DECLARE
 	v_result_id UUID;
 	v_stats JSONB;
+	v_match_status VARCHAR;
+	v_rate RECORD;
+	v_max_per_window INT := 10;
+	v_window_seconds INT := 60;
 BEGIN
-	v_stats := p_summary;
+	IF current_setting('request.jwt.claim.role', true) IS DISTINCT FROM 'service_role' THEN
+		RAISE EXCEPTION 'unauthorized: award_match_rep requires service_role';
+	END IF;
+
+	IF p_rep_delta < 0 OR p_rep_delta > 500 THEN
+		RAISE EXCEPTION 'invalid rep_delta: %', p_rep_delta;
+	END IF;
+
+	SELECT status INTO v_match_status FROM matches WHERE id = p_match_id;
+	IF v_match_status IS NULL THEN
+		RAISE EXCEPTION 'match not found: %', p_match_id;
+	END IF;
+	IF v_match_status NOT IN ('completed', 'active') THEN
+		RAISE EXCEPTION 'match % not awardable (status=%)', p_match_id, v_match_status;
+	END IF;
+
+	SELECT * INTO v_rate FROM award_rep_rate_limits WHERE user_id = p_user_id FOR UPDATE;
+	IF NOT FOUND THEN
+		INSERT INTO award_rep_rate_limits (user_id, window_start, request_count)
+		VALUES (p_user_id, NOW(), 1);
+	ELSE
+		IF v_rate.window_start < NOW() - (v_window_seconds || ' seconds')::interval THEN
+			UPDATE award_rep_rate_limits
+			SET window_start = NOW(), request_count = 1
+			WHERE user_id = p_user_id;
+		ELSIF v_rate.request_count >= v_max_per_window THEN
+			RAISE EXCEPTION 'rate limit exceeded for user %', p_user_id;
+		ELSE
+			UPDATE award_rep_rate_limits
+			SET request_count = request_count + 1
+			WHERE user_id = p_user_id;
+		END IF;
+	END IF;
+
+	v_stats := COALESCE(p_summary, '{}'::jsonb);
 	v_stats := jsonb_set(v_stats, '{won}', to_jsonb(p_won), true);
 
 	INSERT INTO match_results (match_id, user_id, character_id, rep_delta, stats)
@@ -340,8 +425,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.award_match_rep FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.award_match_rep TO service_role;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM anon;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) TO service_role;
 
 -- RLS stubs: block direct client writes to match_results (service role only).
 CREATE POLICY match_results_deny_insert ON match_results

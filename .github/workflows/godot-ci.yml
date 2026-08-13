@@ -46,6 +46,7 @@ jobs:
             "res://scenes/test/test_shader_warmup.tscn"
             "res://scenes/test/test_crash_reporter.tscn"
             "res://scenes/test/test_input_command.tscn"
+            "res://scenes/test/test_supabase_contract.tscn"
           )
           for scene in "${TESTS[@]}"; do
             echo "=== Running $scene ==="
