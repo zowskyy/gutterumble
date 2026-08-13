@@ -1,7 +1,11 @@
 extends Node
-# Autoload: RoundManager
-# Best-of-3 round tracking. The arena calls start_round() / record_win() each bout.
-# Emits signals the arena and HUD listen to.
+# =============================================================================
+# Autoload: RoundManager — CANONICAL match-flow (KEEP)
+# Live arenas (rumble_arena_back_alley.gd) call start_round() / record_win().
+# MatchResolver is test-only / DEFER — do not dual-wire both into arenas.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md.
+# =============================================================================
+# Best-of-3 round tracking. Emits signals the arena and HUD listen to.
 
 signal round_started(round_num: int)
 signal round_over(player_won: bool, player_score: int, enemy_score: int)

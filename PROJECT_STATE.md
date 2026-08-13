@@ -15,7 +15,8 @@ As of 2026-08-13, **do not follow older multiplayer roadmaps blindly**. Authorit
 
 **Canonical fighter:** `fighter.tscn` + `player_controller.gd` — **not** `networked_player.gd`.  
 **Canonical combat:** Hitbox/Hurtbox + AttackConfig → `take_damage`.  
-**Next permitted command after freeze:** Command 02 (consolidation quarantine) only.
+**Next permitted command after freeze:** Command 02 (consolidation quarantine) — **in progress / complete on branch**.
+**After Command 02:** Command 03 (Android offline) when GATE permits.
 
 ## Current snapshot
 
@@ -23,7 +24,7 @@ BUILD_GUIDE_10X.md's 10 slices are implemented for the **offline** combat loop a
 pass Godot CI headless (`.github/workflows/godot-ci.yml`). Project targets
 Godot 4.7 (mobile renderer, per `project.godot`). Cursor Gate CI/protocol removed.
 
-Networking / Supabase Realtime / `networked_player.gd` are **scaffolding**, not a
+Networking / Supabase Realtime / `networked_player.gd` are **non-canonical quarantine**, not a
 working multiplayer foundation — see the audit.
 
 Recent additions on `main` (through Aug 2026):

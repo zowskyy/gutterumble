@@ -1,6 +1,13 @@
 # GUTTERUMBLE — Public Release Roadmap
 
-**Source of truth for slice status:** [`TRACKING.json`](../TRACKING.json)
+> **DRIFT WARNING (2026-08-13):** This roadmap is historical. Authoritative order is
+> [`docs/engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md`](engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md)
+> and [`docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md`](engineering/ARCHITECTURE_MIGRATION_PLAN.md).
+> Phase 1 “Supabase Realtime” combat is **obsolete**. `net/` exists; do not treat
+> `networked_player.gd` as the co-op path. Critical path: canonicalize → Android offline →
+> backend schema → dedicated server → authoritative combat → 2P → content **late**.
+
+**Legacy slice tracker:** [`TRACKING.json`](../TRACKING.json) (status rows may over-claim CODE_COMPLETE)
 
 Engine: Godot 4.x (GDScript, static typing) · Backend: Supabase · Target: Android / Pixel 6a @ 60fps
 
@@ -8,17 +15,16 @@ Each slice is 1–4 hours. No slice is `MERGED` until independently verified aga
 
 ## How to use
 
-1. Pick the next `NOT_STARTED` or `IN_PROGRESS` slice in `TRACKING.json` (phase order).
-2. Implement and verify against the slice's verification steps.
-3. Commit with the slice's `git_commit` message.
-4. Mark `VERIFIED` only after verification steps pass — not on code-complete alone.
+1. Prefer Commands 01–16 in the architecture migration plan over phase tables below.
+2. Implement and verify against acceptance criteria + `COMMAND_AUDIT_LOOP.md`.
+3. Commit with a clear message; mark VERIFIED only after verification steps pass.
 
-## Phase overview
+## Phase overview (legacy)
 
 | Phase | Goal | Slices |
 |-------|------|--------|
 | 0 | Core loop lockdown (single-player feel) | 0.1–0.5 |
-| 1 | Multiplayer core (Supabase Realtime) | 1.1–1.5 |
+| 1 | Multiplayer core (**planned ENet server**; Realtime ≠ combat) | 1.1–1.5 |
 | 2 | Rumble mode complete | 2.1–2.4 |
 | 3 | Performance validation (Pixel 6a 60fps) | 3.1–3.4 |
 | 4 | Backend hardening (RLS, auth) | 4.1–4.3 |
@@ -28,25 +34,21 @@ Each slice is 1–4 hours. No slice is `MERGED` until independently verified aga
 
 ## Repo path mapping
 
-Roadmap paths differ from this repo's layout:
-
 | Roadmap path | Actual path |
 |--------------|-------------|
 | `player/player_controller.gd` | `scenes/player/player_controller.gd` |
 | `combat/hitbox.gd` | `scenes/combat/hitbox.gd` |
 | `systems/customization_manager.gd` | `autoloads/customization_manager.gd` |
-| `net/*.gd` | Not yet created — new `net/` directory |
+| `net/*.gd` | `net/` (present; Realtime stack isolated from combat) |
 
-## Current baseline (2026-08-08)
+## Current baseline (2026-08-13)
 
-Substantial Phase 0 combat work already exists from `BUILD_GUIDE_10X.md`:
-
-- Full player/enemy FSM, combo, dodge, hit-react, KO
-- Two arenas, round flow, customization UI
+- Full offline player/enemy FSM, combo, dodge, hit-react, KO on **fighter.tscn**
+- Two arenas, round flow (`RoundManager`), customization UI
 - Mobile renderer configured in `project.godot`
-- Networking stubs only (`network_manager.gd`, `networked_player.gd`)
+- Networking modules quarantined as non-canonical (`networked_player.gd`, Realtime) — see engineering freeze
 
-See `PROJECT_STATE.md` for detailed implementation snapshot.
+See `PROJECT_STATE.md` and `docs/engineering/REPOSITORY_AUDIT.md`.
 
 ## Slice details
 

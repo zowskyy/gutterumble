@@ -1,8 +1,13 @@
 extends Node
-# Attach to a remote player Node3D to smooth position updates from NetRealtimeSync.
+# =============================================================================
+# RemotePlayerInterpolator — DEFER
+# Historically attached for NetRealtimeSync position smoothing.
+# NOT wired to any live arena scene. Do not treat as combat sync.
+# Revisit only with ENet snapshot interpolation (Command 06+), not Supabase
+# Broadcast combat. See docs/engineering/CANONICAL_ARCHITECTURE.md.
+# Command 02: annotate only.
+# =============================================================================
 # Fair, transparent interpolation; retry stale packets after sequence timeout.
-# Optional debug logging; /health readiness for attachment validation.
-# Revert tick interval to rollback prior smoothing behavior.
 # Scene-tree plugin extension for remote fighters.
 
 const DEFAULT_TICK_INTERVAL_SEC: float = 1.0 / 20.0
