@@ -1,0 +1,52 @@
+[gd_scene load_steps=7 format=3 uid="uid://gutterumble_sprite_fighter"]
+
+[ext_resource type="Script" path="res://scenes/player/player_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://scenes/player/sprite_visual.gd" id="2_sprite"]
+[ext_resource type="Script" path="res://scenes/combat/hitbox.gd" id="3_hitbox"]
+[ext_resource type="Script" path="res://scenes/combat/hurtbox.gd" id="4_hurtbox"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hitbox"]
+radius = 0.50
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hurtbox"]
+radius = 0.55
+
+[node name="SpriteFighter" type="CharacterBody3D"]
+script = ExtResource("1_ctrl")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="SpriteVisual" type="AnimatedSprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.96, 0)
+pixel_size = 0.025
+centered = true
+script = ExtResource("2_sprite")
+
+[node name="Hitbox" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 4
+monitoring = false
+monitorable = false
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.9, 0)
+shape = SubResource("SphereShape3D_hitbox")
+disabled = true
+
+[node name="Hurtbox" type="Area3D" parent="."]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+monitorable = true
+script = ExtResource("4_hurtbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("SphereShape3D_hurtbox")

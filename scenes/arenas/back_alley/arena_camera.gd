@@ -3,11 +3,12 @@ extends Camera3D
 # Zooms out when they're far apart, pulls in when close.
 # Attach to Camera3D in the arena scene and call set_targets() from the arena.
 
-@export var base_height: float    = 7.0
-@export var base_distance: float  = 11.0
+@export var base_height: float    = 3.2   # side-SF readability (was top-down-ish 7)
+@export var base_distance: float  = 9.0   # camera sits on +Z looking at lane
 @export var zoom_speed: float     = 3.0
 @export var follow_speed: float   = 5.0
 @export var x_padding: float      = 4.0    # extra horizontal breathing room
+@export var lock_side_view: bool  = true   # fixed +Z offset; no orbit
 
 @export var finisher_zoom_dist: float   = 5.0
 @export var finisher_zoom_height: float = 3.0
@@ -64,13 +65,17 @@ func _process(delta: float) -> void:
 	var mid: Vector3   = (_target_a.global_position + _target_b.global_position) * 0.5
 	var spread: float  = _target_a.global_position.distance_to(_target_b.global_position)
 
-	# Scale distance with fighter separation
-	var zoom_factor: float = clampf(spread / 6.0, 1.0, 2.2)
+	# Scale distance with fighter separation (milder for side-view SF)
+	var zoom_factor: float = clampf(spread / 6.0, 1.0, 1.8)
 	var target_dist: float = base_distance * zoom_factor
 	var target_h: float    = base_height   * zoom_factor
 
-	# Smooth camera position
-	var target_pos := Vector3(mid.x, target_h, mid.z + target_dist)
+	# Side cam: track midpoint on X; stay at mid.z + distance (locked Z offset).
+	# Do not orbit — keep look-from on +Z of the lane.
+	var cam_z: float = mid.z + target_dist
+	if lock_side_view:
+		cam_z = mid.z + base_distance * zoom_factor
+	var target_pos := Vector3(mid.x, target_h, cam_z)
 	position = position.lerp(target_pos, follow_speed * delta)
 
 	# Always look at the midpoint (slightly above ground)

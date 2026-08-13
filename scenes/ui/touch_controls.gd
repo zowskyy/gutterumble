@@ -164,8 +164,9 @@ func _update_stick(local_pos: Vector2) -> void:
 	var move := Vector2.ZERO
 	if strength > 0.05:
 		move = delta.normalized() * strength
-		# Screen y-down → gameplay y-forward (negative screen y = forward).
-		move.y = -move.y
+		# Stick X = fight axis (matches Input.get_vector ui_left/ui_right).
+		# Stick Y matches ui_up/ui_down (negative Y = stick-up); unused for
+		# lane depth today — may map to crouch/jump later. Do not invert Y.
 	InputRouter.set_touch_move(move)
 
 func _release_stick() -> void:
