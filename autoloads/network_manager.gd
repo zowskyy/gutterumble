@@ -4,14 +4,12 @@ extends Node
 # Revert find_rumble_match wiring to rollback prior matchmaking behavior.
 # Autoload plugin extension delegating rumble matchmaking to LobbyManager.
 # usage: sign_in before find_rumble_match for authenticated lobby join.
+# URL/key come from SupabaseManager — do not duplicate credentials here.
 
 signal auth_succeeded(user_id: String)
 signal auth_failed(error_message: String)
 signal match_connected()
 signal match_connection_failed(error_message: String)
-
-const SUPABASE_URL: String      = "https://your-project.supabase.co"
-const SUPABASE_ANON_KEY: String = "your-anon-key"
 
 var current_user_id: String = ""
 var is_authenticated: bool  = false
@@ -23,8 +21,8 @@ func sign_up(email: String, passwd: String) -> void:
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_sign_up_completed.bind(http))
-	var url := SUPABASE_URL + "/auth/v1/signup"
-	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
+	var url := SupabaseManager.SUPABASE_URL + "/auth/v1/signup"
+	http.request(url, _auth_request_headers(), HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
 
 func sign_in(email: String, passwd: String) -> void:
 	if email.is_empty() or passwd.is_empty():
@@ -32,8 +30,8 @@ func sign_in(email: String, passwd: String) -> void:
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_sign_in_completed.bind(http))
-	var url := SUPABASE_URL + "/auth/v1/token?grant_type=password"
-	http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
+	var url := SupabaseManager.SUPABASE_URL + "/auth/v1/token?grant_type=password"
+	http.request(url, _auth_request_headers(), HTTPClient.METHOD_POST, JSON.stringify({"email": email, "password": passwd}))
 
 func sign_out() -> void:
 	var cleared_id: String = ""
@@ -82,6 +80,14 @@ func disconnect_from_match() -> void:
 
 func _validate_auth_response(parsed: Variant) -> bool:
 	return parsed is Dictionary
+
+func _auth_request_headers() -> PackedStringArray:
+	# Supabase Auth pattern: apikey + Authorization Bearer anon (pre-session).
+	return PackedStringArray([
+		"apikey: " + SupabaseManager.SUPABASE_ANON_KEY,
+		"Authorization: Bearer " + SupabaseManager.SUPABASE_ANON_KEY,
+		"Content-Type: application/json",
+	])
 
 func _make_http() -> HTTPRequest:
 	var http := HTTPRequest.new()

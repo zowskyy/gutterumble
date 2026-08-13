@@ -62,7 +62,7 @@ func create_character(user_id: String, char_data: Dictionary) -> String:
 	_write_json(CHARACTERS_PATH, all)
 	return row["id"]
 
-func update_character(char_id: String, appearance: Array) -> void:
+func update_character(char_id: String, appearance: Dictionary) -> void:
 	var all: Array = _read_json(CHARACTERS_PATH)
 	for i in all.size():
 		if all[i] is Dictionary and all[i].get("id", "") == char_id:

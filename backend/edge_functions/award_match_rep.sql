@@ -1,8 +1,11 @@
--- Supabase Edge Function reference: award_match_rep
--- Deploy as a Deno edge function (service_role) — NOT callable from anon key.
--- See backend/edge_functions/README.md for rate-limit and session validation notes.
+-- Supabase Edge Function reference SQL: award_match_rep
+-- SAME canonical signature as backend/supabase_schema.sql (RepPipeline contract).
+-- Deno edge function wraps this: validates user JWT, then invokes RPC with service_role.
+-- Clients must NEVER call this RPC with the anon key — POST /functions/v1/award-match-rep
+-- with apikey + Authorization: Bearer <user access_token>.
+-- See backend/edge_functions/README.md.
 
--- ── Rate-limit table (run once in SQL editor) ─────────────────────────────────
+-- ── Rate-limit table (idempotent) ─────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS award_rep_rate_limits (
 	user_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
@@ -11,7 +14,11 @@ CREATE TABLE IF NOT EXISTS award_rep_rate_limits (
 );
 
 ALTER TABLE award_rep_rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE award_rep_rate_limits FORCE ROW LEVEL SECURITY;
 -- No client policies — service role only.
+
+-- Drop legacy conflicting signature (placement INT / RETURNS JSONB) if present.
+DROP FUNCTION IF EXISTS public.award_match_rep(UUID, UUID, UUID, INT, INT, JSONB);
 
 -- ── Privileged rep award (SECURITY DEFINER, service_role callers only) ────────
 
@@ -19,22 +26,22 @@ CREATE OR REPLACE FUNCTION public.award_match_rep(
 	p_match_id UUID,
 	p_user_id UUID,
 	p_character_id UUID,
-	p_placement INT,
+	p_won BOOLEAN,
 	p_rep_delta INT,
-	p_stats JSONB DEFAULT '{}'::jsonb
-)
-RETURNS JSONB
+	p_summary JSONB DEFAULT '{}'::jsonb
+) RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+	v_result_id UUID;
+	v_stats JSONB;
 	v_match_status VARCHAR;
 	v_rate RECORD;
 	v_max_per_window INT := 10;
 	v_window_seconds INT := 60;
 BEGIN
-	-- Session / caller validation: only service_role may invoke.
 	IF current_setting('request.jwt.claim.role', true) IS DISTINCT FROM 'service_role' THEN
 		RAISE EXCEPTION 'unauthorized: award_match_rep requires service_role';
 	END IF;
@@ -51,7 +58,6 @@ BEGIN
 		RAISE EXCEPTION 'match % not awardable (status=%)', p_match_id, v_match_status;
 	END IF;
 
-	-- Per-user rate limit: max 10 awards per 60-second window.
 	SELECT * INTO v_rate FROM award_rep_rate_limits WHERE user_id = p_user_id FOR UPDATE;
 	IF NOT FOUND THEN
 		INSERT INTO award_rep_rate_limits (user_id, window_start, request_count)
@@ -70,26 +76,32 @@ BEGIN
 		END IF;
 	END IF;
 
-	-- Upsert match result and apply rep atomically.
-	INSERT INTO match_results (match_id, user_id, character_id, placement, rep_delta, stats)
-	VALUES (p_match_id, p_user_id, p_character_id, p_placement, p_rep_delta, p_stats)
-	ON CONFLICT (match_id, user_id) DO UPDATE
-		SET placement = EXCLUDED.placement,
-		    rep_delta = EXCLUDED.rep_delta,
-		    stats = EXCLUDED.stats;
+	v_stats := COALESCE(p_summary, '{}'::jsonb);
+	v_stats := jsonb_set(v_stats, '{won}', to_jsonb(p_won), true);
 
-	UPDATE characters
-	SET rep = rep + p_rep_delta
-	WHERE id = p_character_id AND user_id = p_user_id;
+	INSERT INTO match_results (match_id, user_id, character_id, rep_delta, stats)
+	VALUES (p_match_id, p_user_id, p_character_id, p_rep_delta, v_stats)
+	ON CONFLICT (match_id, user_id) DO NOTHING
+	RETURNING id INTO v_result_id;
 
-	RETURN jsonb_build_object(
-		'match_id', p_match_id,
-		'user_id', p_user_id,
-		'rep_delta', p_rep_delta,
-		'placement', p_placement
-	);
+	IF v_result_id IS NULL THEN
+		SELECT id INTO v_result_id
+		FROM match_results
+		WHERE match_id = p_match_id AND user_id = p_user_id;
+		RETURN v_result_id;
+	END IF;
+
+	IF p_character_id IS NOT NULL THEN
+		UPDATE characters
+		SET rep = rep + p_rep_delta
+		WHERE id = p_character_id AND user_id = p_user_id;
+	END IF;
+
+	RETURN v_result_id;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, INT, INT, JSONB) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.award_match_rep(UUID, UUID, UUID, INT, INT, JSONB) TO service_role;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM anon;
+REVOKE ALL ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.award_match_rep(UUID, UUID, UUID, BOOLEAN, INT, JSONB) TO service_role;

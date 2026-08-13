@@ -1,13 +1,17 @@
 extends Node
 # Supabase REST client with local JSON fallback when credentials are unset.
 # Fair, transparent routing to LocalProfileStore for offline development.
-# Optional debug logging; revert API_HEADERS to rollback prior remote wiring.
+# Optional debug logging; revert auth_headers to rollback prior remote wiring.
 # retry HTTP after timeout; /health via use_local_fallback diagnostics.
-# validate user_id before requests; plugin extension for match result RPC writes.
-# usage: SupabaseManager.record_match_result(payload) via RepPipeline
+# validate user_id before requests; plugin extension for match result edge writes.
+# usage: SupabaseManager.record_match_result(payload) via RepPipeline (local);
+#        remote rewards go through /functions/v1/award-match-rep (RepPipeline).
 
 const SUPABASE_URL: String        = "https://your-project.supabase.co"
 const SUPABASE_ANON_KEY: String   = "your-anon-key"
+## REST path segment for queue inserts (tests assert this contains matchmaking_queue).
+const MATCHMAKING_QUEUE_PATH: String = "/rest/v1/matchmaking_queue"
+## Legacy anon-only header pack — prefer auth_headers() for authenticated calls.
 const API_HEADERS: PackedStringArray = ["apikey: your-anon-key", "Content-Type: application/json"]
 
 signal characters_loaded(data: Array)
@@ -25,6 +29,20 @@ func _ready() -> void:
 		add_child(_local_store)
 		print("SupabaseManager: using local profile fallback (user://gutterumble_local/)")
 
+func auth_headers(prefer_representation: bool = false) -> PackedStringArray:
+	# Shared by LobbyManager / RepPipeline. Bearer = user JWT when signed in, else anon.
+	var bearer: String = SUPABASE_ANON_KEY
+	if NetworkManager != null and not str(NetworkManager.auth_bearer).is_empty():
+		bearer = NetworkManager.auth_bearer
+	var headers: PackedStringArray = PackedStringArray([
+		"apikey: " + SUPABASE_ANON_KEY,
+		"Authorization: Bearer " + bearer,
+		"Content-Type: application/json",
+	])
+	if prefer_representation:
+		headers.append("Prefer: return=representation")
+	return headers
+
 func get_characters(user_id: String) -> void:
 	if not user_id or user_id.is_empty():
 		return  # error: reject empty user id
@@ -33,7 +51,7 @@ func get_characters(user_id: String) -> void:
 		return
 	var http := _make_http()
 	http.request_completed.connect(_on_get_characters_completed.bind(http))
-	http.request(SUPABASE_URL + "/rest/v1/characters?user_id=eq." + user_id, API_HEADERS)
+	http.request(SUPABASE_URL + "/rest/v1/characters?user_id=eq." + user_id, auth_headers())
 
 func create_character(user_id: String, char_data: Dictionary) -> void:
 	if use_local_fallback and _local_store:
@@ -46,9 +64,9 @@ func create_character(user_id: String, char_data: Dictionary) -> void:
 	http.request_completed.connect(_on_create_character_completed.bind(http))
 	var body := char_data.duplicate()
 	body["user_id"] = user_id
-	http.request(SUPABASE_URL + "/rest/v1/characters", API_HEADERS, HTTPClient.METHOD_POST, JSON.stringify(body))
+	http.request(SUPABASE_URL + "/rest/v1/characters", auth_headers(true), HTTPClient.METHOD_POST, JSON.stringify(body))
 
-func update_character(char_id: String, appearance: Array) -> void:
+func update_character(char_id: String, appearance: Dictionary) -> void:
 	if use_local_fallback and _local_store:
 		_local_store.update_character(char_id, appearance)
 		return
@@ -58,12 +76,14 @@ func update_character(char_id: String, appearance: Array) -> void:
 	http.request_completed.connect(_on_generic_completed.bind(http))
 	http.request(
 		SUPABASE_URL + "/rest/v1/characters?id=eq." + char_id,
-		API_HEADERS,
+		auth_headers(),
 		HTTPClient.METHOD_PATCH,
 		JSON.stringify({"appearance": appearance})
 	)
 
 func log_match(user_id: String, summary: Dictionary) -> void:
+	# Remote: intentionally local-only no-op. RepPipeline → award-match-rep is the
+	# canonical rewards / match_results write path (service_role via edge).
 	if use_local_fallback and _local_store:
 		_local_store.log_match(user_id, summary)
 		return
@@ -73,13 +93,13 @@ func record_match_result(payload: Dictionary) -> String:
 		return ""  # error: reject empty match result payload
 	if use_local_fallback and _local_store and _local_store.has_method("record_match_result"):
 		return _local_store.record_match_result(payload)
-	return ""  # error: remote path requires service-role RPC
+	return ""  # error: remote path requires edge function + service-role RPC
 
 func get_backend_diagnostic() -> String:
 	# log.info snapshot for backend transparency and /health readiness checks
 	return "local_fallback=%s" % use_local_fallback
 
-func queue_for_match(user_id: String) -> void:
+func queue_for_match(user_id: String, mode: String = "rumble_coop", region: String = "global") -> void:
 	if not user_id or user_id.is_empty():
 		return  # error: reject empty user id for queue
 	if use_local_fallback and _local_store:
@@ -89,10 +109,15 @@ func queue_for_match(user_id: String) -> void:
 	var http := _make_http()
 	http.request_completed.connect(_on_queue_completed.bind(http))
 	http.request(
-		SUPABASE_URL + "/rest/v1/matchmaking",
-		API_HEADERS,
+		SUPABASE_URL + MATCHMAKING_QUEUE_PATH,
+		auth_headers(true),
 		HTTPClient.METHOD_POST,
-		JSON.stringify({"user_id": user_id, "queue_time": Time.get_ticks_msec()})
+		JSON.stringify({
+			"player_id": user_id,
+			"mode": mode,
+			"region": region,
+			"status": "queued",
+		})
 	)
 
 func _make_http() -> HTTPRequest:
