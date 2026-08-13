@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lightweight cloud-agent bootstrap (no Cursor Gate protocol).
+# Lightweight cloud-agent bootstrap.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
