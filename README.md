@@ -4,22 +4,19 @@ Street-fighting arena brawler built in **Godot 4.7** (Mobile/Android). Customize
 
 **Status**: Main Menu ✅ · Character Creator ✅ · Back Alley Arena ✅ · Rooftop Arena ✅ · Combat Core ✅ · Remaining Content ❌
 
-See [BUILD_GUIDE.md](BUILD_GUIDE.md) for the full slide-by-slice development roadmap (~15–20 playable hours target, 6 arenas, 5 weapon types).
+See [BUILD_GUIDE.md](BUILD_GUIDE.md) for the full slide-by-slide development roadmap (~15–20 playable hours target, 6 arenas, 5 weapon types).
 
 ## Install
 
 ### Prerequisites
 
 - [Godot 4.7](https://godotengine.org/) (Mobile export templates for Android)
-- Python 3.12+ (Cursor Gate tooling only)
 
-### Clone and bootstrap
+### Clone
 
 ```bash
 git clone https://github.com/zowskyy/gutterumble.git
 cd gutterumble
-pip install -r requirements.txt
-bash scripts/install-agent-environment.sh
 ```
 
 Open `project.godot` in the Godot editor, or import the folder as an existing project.
@@ -46,12 +43,6 @@ Install Android SDK/NDK via Godot Editor → Export → Android, then configure 
 | Space | Dodge |
 | C | Special (when meter full) |
 
-### Gate a file locally
-
-```bash
-bash scripts/gate-file.sh --file samples/hello_passing.py
-```
-
 ## Deploy
 
 | Target | Steps |
@@ -75,13 +66,6 @@ Full detail in [BUILD_GUIDE.md](BUILD_GUIDE.md):
 | 4 | Progression | Profile persistence, match stats, opponent selector |
 | 5 | Launch polish | Menu refinement, performance, APK on device |
 
-## Cursor Gate
+## CI
 
-```bash
-bash scripts/install-agent-environment.sh
-bash scripts/gate-file.sh --file samples/hello_passing.py
-```
-
-PR CI: `.github/workflows/gate-check.yml` gates `samples/hello_passing.py` on every pull request.
-
-Agent policy: [AGENTS.md](AGENTS.md)
+PR/push CI: [`.github/workflows/godot-ci.yml`](.github/workflows/godot-ci.yml) — headless import, boot smoke, and slice tests.

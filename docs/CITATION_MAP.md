@@ -2,7 +2,7 @@
 
 _Last verified: 2026-08-08 via web search. Update this file when slices or standards change._
 
-This map is the quarterback's source of truth for **citation-backed decisions**. Consult before implementing; update after web search finds new evidence.
+This map is the source of truth for **citation-backed decisions**. Consult before implementing; update after web search finds new evidence.
 
 ---
 
@@ -10,11 +10,8 @@ This map is the quarterback's source of truth for **citation-backed decisions**.
 
 | Layer | Rule file | Role |
 |-------|-----------|------|
-| Quarterback | `.cursor/rules/quarterback-worker.mdc` | Decompose, delegate, re-gate, deliver |
-| Taylor worker | `.cursor/rules/taylor-worker-frontier-relay.mdc` | Implement slices only; return file list + gate status |
-| Frontier relay | same + `AGENTS.md` | Both gate scripts until PASS on every changed file |
 | Web verify | `.cursor/rules/web-search-verify.mdc` | Search before technical claims; update this map |
-| Ship | `.cursor/rules/ship-finished-work.mdc` | No partial deliverables |
+| Agent notes | `AGENTS.md` | Project principles and architecture constraints |
 
 ---
 
@@ -134,11 +131,7 @@ This map is the quarterback's source of truth for **citation-backed decisions**.
 | Check | Command / URL | Green means |
 |-------|---------------|-------------|
 | Godot headless | `.github/workflows/godot-ci.yml` | Boot main scene + spawn validator, no SCRIPT ERROR |
-| Gate check | `.github/workflows/gate-check.yml` | Gate scripts PASS on changed files |
-| Local gate | `bash scripts/gate-file.sh --file <path>` | Both reviewers PASS |
 | Debug worker | Task `subagent_type=debug` | Run when CI or headless repro fails |
-
-**Current PR #3 CI (2026-08-08):** `gate` ✅ · `headless-check` ✅
 
 ---
 

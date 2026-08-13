@@ -66,8 +66,7 @@ Recent additions on `main` (through Aug 2026):
 - `.github/workflows/godot-ci.yml` — runs on every push/PR: imports the
   project, boots the main scene (exercises every autoload), greps the log
   for parse/script errors (Godot doesn't reliably exit non-zero on those),
-  then runs `test_spawn_validator.tscn`
-- `.github/workflows/gate-check.yml` — Cursor Gate on `samples/hello_passing.py`
+  then runs headless slice tests
 
 ## Bugs found and fixed during this sprint (not newly introduced — pre-existing)
 
