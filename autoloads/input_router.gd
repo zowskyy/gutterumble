@@ -17,6 +17,10 @@ var _touch_pulses: Dictionary = {}  # String -> bool
 var _cached_cmd: InputCommand = null
 var _cached_process_frame: int = -1
 
+func _ready() -> void:
+	# Survive tree pause so touch pause/resume edges still route through consume_command.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 func set_touch_move(v: Vector2) -> void:
 	_touch_move = v
 	_touch_move_active = true

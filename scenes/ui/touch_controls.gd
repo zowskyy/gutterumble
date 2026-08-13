@@ -73,6 +73,7 @@ func _build_ui() -> void:
 	_add_action_button(_btn_row, "Special", "special", Vector2(BTN_SIZE, BTN_SIZE))
 	_add_action_button(_btn_row, "Use", "interact", Vector2(SMALL_BTN, SMALL_BTN))
 	_add_action_button(_btn_row, "Revive", "revive", Vector2(SMALL_BTN, SMALL_BTN))
+	_add_action_button(_btn_row, "Pause", "pause", Vector2(SMALL_BTN, SMALL_BTN))
 
 func _add_action_button(parent: Control, label: String, action: String, min_size: Vector2) -> void:
 	# Touch buttons must call pulse_touch_action only.
