@@ -1,3 +1,7 @@
+; QUARANTINE — NON-CANONICAL PLAYER SCENE
+; Do NOT instance from arenas. Pairs with networked_player.gd (obsolete path).
+; Canonical spawn: res://scenes/player/fighter.tscn
+; See docs/engineering/CANONICAL_ARCHITECTURE.md
 [gd_scene load_steps=2 format=3 uid="uid://gutterumble_player"]
 
 [ext_resource type="Script" path="res://scenes/player/networked_player.gd" id="1"]

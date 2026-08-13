@@ -1,4 +1,13 @@
 extends Node
+# =============================================================================
+# Match server skeleton — REPLACE (Command 05+)
+# ENet listen server stub. NOT an autoload. Empty player_attack / _on_receive_state.
+# Rebuild around the SHARED gameplay sim extracted from PlayerController /
+# Hitbox / AttackConfig — do not invent a second combat ruleset here.
+# Clients must send InputCommand intent only; server owns outcomes.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md + ARCHITECTURE_MIGRATION_PLAN.md.
+# Command 02: annotate only — no gameplay behavior change.
+# =============================================================================
 
 @export var port: int = 8910
 @export var max_players: int = 16
@@ -36,6 +45,8 @@ func player_action(action: String, data: Dictionary) -> void:
 
 @rpc("any_peer")
 func player_attack(target_id: int, attack_type: String) -> void:
+	# STUB — does not apply damage. Future: reject client-claimed hits;
+	# resolve attacks only inside shared server sim from InputCommand.
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	var attacker: Dictionary = players.get(peer_id, {})
 	var target: Dictionary = players.get(target_id, {})

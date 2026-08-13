@@ -1,10 +1,12 @@
 extends Node
 class_name MatchStart
+# =============================================================================
+# MatchStart — DEFER
+# Useful for future dedicated-server countdown; tested by test_match_start.tscn.
+# Offline arenas use their own countdown — do not dual-wire yet.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md. Command 02: annotate only.
+# =============================================================================
 # Server-authoritative countdown synchronized via shared unix timestamp broadcast.
-# Fair, transparent sync for late joiners; clients derive remaining seconds locally.
-# Optional debug logging; revert COUNTDOWN_SECS to rollback prior start timing.
-# retry RPC broadcast after timeout; /health readiness via get_countdown_diagnostic().
-# validate fight_start_unix before applying; LobbyManager plugin extension when present.
 # usage: server calls begin_countdown_as_server(); clients listen to countdown_tick.
 
 signal countdown_tick(seconds_remaining: int)

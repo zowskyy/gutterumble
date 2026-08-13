@@ -1,8 +1,17 @@
 extends CharacterBody3D
-# Networked fighter — wraps player_controller.gd authority model.
-# Uses MultiplayerSynchronizer for position/rotation replication.
-# The authoritative peer runs full physics; remote peers receive snapshots.
+# =============================================================================
+# QUARANTINE — NOT THE CANONICAL PLAYER
+# Do NOT spawn this from arenas. Canonical path:
+#   scenes/player/fighter.tscn + scenes/player/player_controller.gd
+# This script is an obsolete parallel multiplayer capsule with stub combat RPCs
+# (_rpc_attack_light → pass). Future online combat must reuse the shared sim from
+# PlayerController / Hitbox / AttackConfig — not extend this file as the fighter.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md (DEFER → eventual DELETE).
+# Command 02: quarantine annotate only. Do not wire into rumble_arena_*.gd.
+# =============================================================================
 #
+# Historical notes (obsolete):
+# Networked fighter — intended MultiplayerSynchronizer position/health sync.
 # Node structure expected:
 #   NetworkedPlayer (this script)
 #   ├─ CollisionShape3D
@@ -38,7 +47,9 @@ func _physics_process(delta: float) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func _rpc_attack_light() -> void:
-	pass   # wire to player_controller._try_start_attack() once merged
+	# STUB — intentionally empty. Do NOT "wire to player_controller" here.
+	# Authoritative combat belongs on the dedicated-server shared sim (Command 06).
+	pass
 
 @rpc("authority", "call_local", "reliable")
 func _rpc_sync_health(new_hp: float) -> void:

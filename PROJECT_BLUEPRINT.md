@@ -1,9 +1,20 @@
 # GUTTERUMBLE — Project Blueprint
 
+> **Architecture authority (2026-08-13):** Prefer
+> [`docs/engineering/CANONICAL_ARCHITECTURE.md`](docs/engineering/CANONICAL_ARCHITECTURE.md),
+> [`docs/engineering/REPOSITORY_AUDIT.md`](docs/engineering/REPOSITORY_AUDIT.md), and
+> [`docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md`](docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md)
+> over this blueprint when they conflict.
+>
+> **Critical:** Canonical fighter is `fighter.tscn` + `player_controller.gd`.
+> Do **not** wire `networked_player.gd` into arenas. Supabase Realtime is **not**
+> combat authority — future gameplay transport is ENet + dedicated Godot server.
+> Phase 1 “CODE_COMPLETE” multiplayer rows below are **scaffolding**, not a working foundation.
+
 **Genre:** Warriors-style arena brawler (many-on-many)  
 **Engine:** Godot 4.7 (Mobile renderer)  
-**Stack:** GDScript, Supabase Realtime (Broadcast), local fallback, cel-shaded 3D  
-**Roadmap:** [`TRACKING.json`](TRACKING.json) · [`docs/PUBLIC_RELEASE_ROADMAP.md`](docs/PUBLIC_RELEASE_ROADMAP.md) · [`docs/CITATION_MAP.md`](docs/CITATION_MAP.md)
+**Stack:** GDScript, Supabase (auth/lobby/persistence), ENet dedicated server (planned), local fallback, cel-shaded 3D  
+**Roadmap:** engineering docs above · [`TRACKING.json`](TRACKING.json) · [`docs/CITATION_MAP.md`](docs/CITATION_MAP.md)
 
 ## Vision
 

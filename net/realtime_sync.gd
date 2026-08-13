@@ -1,9 +1,15 @@
 extends Node
+# =============================================================================
 # Autoload: NetRealtimeSync
-# Supabase Realtime Broadcast for high-frequency position/animation state.
+# ISOLATED — NOT COMBAT AUTHORITY
+# Supabase Realtime Broadcast may carry lobby/presence/metadata-adjacent state.
+# It must NEVER own hit detection, damage, health, KO, rewards, or wave results.
+# Future realtime gameplay transport: ENet + dedicated Godot match server.
+# DEFER removal until Command 13 (after references migrated). Command 02 annotate.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md Critical Rules 10–12.
+# =============================================================================
 # Fair, transparent sync with local fallback when credentials are unset.
 # Optional debug logging; retry reconnect after timeout; /health readiness.
-# Revert subscription wiring to rollback prior realtime behavior.
 # Autoload plugin extension for match channels.
 
 signal state_received(peer_id: String, payload: Dictionary)

@@ -1,10 +1,14 @@
 extends Node
-# Autoload: MatchResolver
+# =============================================================================
+# Autoload: MatchResolver — DEFER (test-only today)
+# Exercised by scenes/test/test_match_resolver.tscn.
+# Live arenas use RoundManager (autoloads/round_manager.gd) — KEEP canonical.
+# Do NOT dual-wire MatchResolver into rumble_arena_back_alley.gd until an
+# explicit compare-and-integrate command. Command 02: annotate only.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md.
+# =============================================================================
 # Deterministic win/loss evaluation from synced match state snapshots.
 # Fair, transparent elimination and timer-expiry rules; all clients agree.
-# Optional debug logging; revert evaluate paths to rollback prior win logic.
-# retry evaluate after state reconcile timeout; /health via get_resolver_diagnostic().
-# validate teams/scores schema before resolving; plugin extension for rumble modes.
 # usage: MatchResolver.evaluate(state, MatchResolver.WinMode.ELIMINATION)
 
 enum WinMode {

@@ -1,9 +1,12 @@
 extends Node
-# Autoload: NetConnectionLifecycle
-# Handles app pause/resume teardown and Realtime resubscription.
+# =============================================================================
+# Autoload: NetConnectionLifecycle — DEFER
+# Handles app pause/resume teardown and Supabase Realtime resubscription ONLY.
+# This is NOT the dedicated Godot match-server connection lifecycle.
+# Rework for ENet pause/resume in Command 10. Command 02: annotate only.
+# See docs/engineering/CANONICAL_ARCHITECTURE.md.
+# =============================================================================
 # Fair, transparent reconnect flow with retry after resume timeout.
-# Optional debug logging; /health readiness for subscription state.
-# Revert pause hooks to rollback prior lifecycle behavior.
 # Autoload plugin extension coordinating NetRealtimeSync.
 
 signal reconnecting()
