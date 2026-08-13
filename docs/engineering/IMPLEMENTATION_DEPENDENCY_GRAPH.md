@@ -110,25 +110,25 @@ Solid edges are hard blockers. Dotted edges call out long-range dependencies tha
 
 ### Gate 6 — Authoritative combat
 
-**Scope:** Replace stubs `CombatManager.apply_damage`, `networked_player._rpc_attack_light`; ban trust of raw `@rpc("any_peer")` attack success; server validates hit windows using `AttackConfig` data; clients predict, server confirms.
+**Scope:** Run the **canonical** Hitbox/`AttackConfig`/`take_damage` rules inside the dedicated server sim (extracted/shared from `player_controller.gd` / `enemy_ai.gd`). Clients send `InputCommand` intent only. Ban trusting `@rpc("any_peer")` attack success. Do **not** implement combat by filling in `networked_player._rpc_attack_light` or `CombatManager.apply_damage` — those paths are obsolete (quarantine / replace / delete per freeze).
 
 **Depends on:** Gate 1 (canonical damage API), Gate 5 (server tick to validate on).
 
 **Unlocks:** Gate 7, Gates 8–10 (gameplay systems that deal damage must go through the same authority channel).
 
-**Why before co-op features:** Two players exchanging unverified `_rpc_attack_light` / `player_attack` calls invent desync and cheating. AI/revive/weapons added atop client-authoritative hits hard-wire unfair netcode.
+**Why before co-op features:** Two clients exchanging unverified attack RPCs invent desync and cheating. AI/revive/weapons added atop client-authoritative hits hard-wire unfair netcode. Filling `networked_player.gd` would create a second combat game beside the working offline FSM.
 
 ---
 
 ### Gate 7 — 2-player co-op
 
-**Scope:** Wire `networked_player.gd` (or merge into `player_controller.gd` authority model), attach `RemotePlayerInterpolator`, drive `MatchStart` countdown from server, spawn second human in `rumble_arena_back_alley.gd` when a peer is present.
+**Scope:** Spawn a **second human on `fighter.tscn` + `PlayerController`** (presentation + prediction) driven by server snapshots/events — **never** switch the arena to `player.tscn` / `networked_player.gd`. Reuse or rewrite interpolator against **ENet snapshots** (not Supabase Realtime combat). Server-driven countdown may adopt `MatchStart` concepts after compare.
 
 **Depends on:** Gate 5, Gate 6.
 
 **Unlocks:** Gate 8+ (co-op content), Gate 12 (matchmaking targets a working 2P session).
 
-**Why:** Matchmaking into a solo AI arena wastes the queue. Interpolation and countdown only matter once two peers share authoritative combat.
+**Why:** Matchmaking into a solo AI arena wastes the queue. Co-op must prove two independently connected clients share the **same** canonical combat sim — the audit-proven offline model — not a parallel networked capsule fighter.
 
 ---
 
@@ -267,16 +267,19 @@ Solid edges are hard blockers. Dotted edges call out long-range dependencies tha
 
 ## Mapping to Commands 01–16
 
-Commands should advance gates in order. A command may implement part of a gate but must not claim the next gate’s systems complete. When a command’s checklist contradicts [`REPOSITORY_AUDIT.md`](./REPOSITORY_AUDIT.md), the audit wins (other docs are DRIFT).
+Every command must run the loop in [`COMMAND_AUDIT_LOOP.md`](./COMMAND_AUDIT_LOOP.md) and emit a **COMMAND GATE** with `Next command permitted: YES/NO`.
+
+Commands advance gates in order. A command may implement part of a gate but must not claim the next gate’s systems complete. When a command’s checklist contradicts [`REPOSITORY_AUDIT.md`](./REPOSITORY_AUDIT.md) or [`CANONICAL_ARCHITECTURE.md`](./CANONICAL_ARCHITECTURE.md), those docs win (other roadmaps are DRIFT).
 
 | Gate band | Typical command focus |
 |-----------|----------------------|
-| 0–1 | Docs + orphan quarantine / live-path freeze |
-| 2 | Android export + touch + pause wiring |
-| 3–4 | SQL + client contract + auth headers |
-| 5–7 | Server, authority, co-op session |
-| 8–11 | AI, revive, weapons, waves/boss |
-| 12–14 | Matchmaking, perf, content/release |
+| 0–1 | Forensic audit + canonical freeze + consolidation quarantine |
+| 2 | Android export + InputCommand + touch + pause |
+| 3–4 | SQL + lobby/auth contract |
+| 5–6 | Dedicated server movement + authoritative combat (canonical sim) |
+| 7–8 | 2P co-op on `fighter.tscn` + AI/revive/weapons online |
+| 9–10 | Waves/boss + matchmaking + Android online |
+| 11–14 | Perf → security → dead code → content/progression/100-pass |
 
 ---
 

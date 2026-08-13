@@ -1,11 +1,30 @@
 # GutterRumble — Project State
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-13_
+
+## Engineering authority (read first)
+
+As of 2026-08-13, **do not follow older multiplayer roadmaps blindly**. Authoritative docs:
+
+| Doc | Role |
+|-----|------|
+| [`docs/engineering/REPOSITORY_AUDIT.md`](docs/engineering/REPOSITORY_AUDIT.md) | Forensic ground truth |
+| [`docs/engineering/CANONICAL_ARCHITECTURE.md`](docs/engineering/CANONICAL_ARCHITECTURE.md) | KEEP/MERGE/REPLACE/DELETE/DEFER freeze |
+| [`docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md`](docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md) | Command order + consolidation plan |
+| [`docs/engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md`](docs/engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md) | Hard gates |
+| [`docs/engineering/COMMAND_AUDIT_LOOP.md`](docs/engineering/COMMAND_AUDIT_LOOP.md) | PASS/FAIL/UNVERIFIED process |
+
+**Canonical fighter:** `fighter.tscn` + `player_controller.gd` — **not** `networked_player.gd`.  
+**Canonical combat:** Hitbox/Hurtbox + AttackConfig → `take_damage`.  
+**Next permitted command after freeze:** Command 02 (consolidation quarantine) only.
 
 ## Current snapshot
 
-BUILD_GUIDE_10X.md's 10 slices are all implemented, committed, and passing the
-Godot CI headless workflow (`.github/workflows/godot-ci.yml`). Project targets
-Godot 4.7 (mobile renderer, per `project.godot`).
+BUILD_GUIDE_10X.md's 10 slices are implemented for the **offline** combat loop and
+pass Godot CI headless (`.github/workflows/godot-ci.yml`). Project targets
+Godot 4.7 (mobile renderer, per `project.godot`). Cursor Gate CI/protocol removed.
+
+Networking / Supabase Realtime / `networked_player.gd` are **scaffolding**, not a
+working multiplayer foundation — see the audit.
 
 Recent additions on `main` (through Aug 2026):
 

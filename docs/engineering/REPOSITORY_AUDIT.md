@@ -386,40 +386,39 @@ Android is a **documentation aspiration**, not an exportable build in-tree.
 
 Prioritized for Commands 01–16 (docs-only this command; gameplay files listed as **targets**, not modified here):
 
-**Canonicalize / orphans**
+**Canonicalize / orphans** (see also `CANONICAL_ARCHITECTURE.md`)
 
-- `scenes/combat/combat_manager.gd` — implement or delete `apply_damage`
-- `scenes/player/networked_player.gd` — implement `_rpc_attack_light` or isolate
-- `scenes/player/player.tscn` — wire or remove
-- `backend/match_server.gd` — implement `_on_receive_state` / attack resolution
-- `net/remote_player_interpolator.gd` — attach from networked fighter scenes
-- `scenes/player/fighter_lod.gd` — wire after assets
-- `scenes/arenas/back_alley/material_manager.gd` — wire or archive
-- `net/match_start.gd` — integrate into match flow
-- `systems/match_resolver.gd` / `systems/rep_pipeline.gd` — call from arena or demote from “live” docs
+- `scenes/combat/combat_manager.gd` — quarantine / remove misleading `apply_damage` API (do **not** make it authoritative)
+- `scenes/player/networked_player.gd` + `scenes/player/player.tscn` — quarantine; eventual delete; **never** arena-wire
+- `backend/match_server.gd` — rebuild around shared sim (Command 05+), not empty RPC stubs
+- `net/realtime_sync.gd` / `net/remote_player_interpolator.gd` / `net/connection_lifecycle.gd` — isolate from combat; rework under ENet later
+- `scenes/player/fighter_lod.gd` — wire after assets (DEFER)
+- `scenes/arenas/back_alley/material_manager.gd` — unused today; wire or archive (DEFER)
+- `net/match_start.gd` — DEFER until server countdown needs it
+- `systems/match_resolver.gd` — DEFER compare vs `RoundManager`; do not dual-wire
+- `systems/rep_pipeline.gd` — MERGE to service_role reward path; arena currently uses `SupabaseManager.log_match`
 
 **Android offline**
 
-- `project.godot` — touch actions; eventual `[android]` / export metadata
-- new `export_presets.cfg`
-- `scenes/ui/pause_menu.gd` + `.tscn` — connect Resume/Quit
-- new touch HUD scene + player input routing in `player_controller.gd`
+- `project.godot` — InputCommand-fed actions (keyboard / gamepad / touch)
+- new `export_presets.cfg` (valid Godot 4.7 only)
+- `scenes/ui/pause_menu.gd` + `.tscn` — connect Resume/Quit for touch + controller
+- new touch HUD → same InputCommand as desktop (no combat logic in buttons)
 
 **Backend schema**
 
 - `backend/supabase_schema.sql`
 - `backend/edge_functions/award_match_rep.sql` — single definition
-- `net/lobby_manager.gd` — field names
-- `backend/supabase_manager.gd` — appearance type, `queue_for_match`, remote `log_match`
-- `autoloads/network_manager.gd` — auth `apikey`
+- `net/lobby_manager.gd` — `host_id` + `status` matching SQL
+- `backend/supabase_manager.gd` — appearance object, real `matchmaking_queue`, remote persistence
+- `autoloads/network_manager.gd` — auth `apikey` + `Authorization`
 
 **Dedicated server / authority / co-op**
 
-- `backend/match_server.gd`
-- `autoloads/network_manager.gd`
-- `scenes/player/networked_player.gd`
-- `net/realtime_sync.gd` / `net/connection_lifecycle.gd`
-- `scenes/arenas/back_alley/rumble_arena_back_alley.gd` — optional net entrypoints
+- Shared sim extracted from `player_controller.gd` / `enemy_ai.gd` / Hitbox path
+- `backend/match_server.gd` + `autoloads/network_manager.gd` (ENet client)
+- `scenes/arenas/back_alley/rumble_arena_back_alley.gd` — net entry that still spawns `fighter.tscn`
+- **Not** `networked_player.gd` as the co-op fighter
 
 **Content / feel / performance** (later gates)
 
@@ -431,20 +430,23 @@ Prioritized for Commands 01–16 (docs-only this command; gameplay files listed 
 
 ## 20. Recommended implementation order
 
-Aligns with the revised critical path:
+Aligns with the revised critical path (six arenas are **late** — after 2P authoritative combat proof):
 
-1. **Canonicalize** — freeze live path; mark/remove orphans; make docs match `rumble_arena_back_alley.gd` + fighter/enemy + Hitbox path.
-2. **Android offline** — export presets, touch controls, wire pause buttons; ship a single-player APK loop.
-3. **Backend schema** — unify lobby fields, appearance type, single `award_match_rep`, fix auth `apikey`, remove phantom `/matchmaking`.
-4. **Dedicated server** — make `match_server.gd` a real tick + state broadcast.
-5. **Authoritative combat** — server-validated hits; kill `any_peer` attack RPCs; replace `apply_damage` / `_rpc_attack_light` stubs.
-6. **2-player co-op** — wire `networked_player` + `RemotePlayerInterpolator` + `MatchStart` into arena boot.
-7. **AI / revive / weapons** — deepen `enemy_ai.gd`, add revive contract, implement weapon manifest → combat.
-8. **Waves / boss** — extend `GangSpawner` wave tables; add boss encounter scenes.
-9. **Matchmaking** — real queue against schema; connect `NetworkManager.find_rumble_match` to server allocation.
-10. **Performance** — LOD, pools, Pixel 6a profiling (`PerfLogger`).
-11. **Content** — arenas, animations retarget, audio polish.
-12. **Release** — store compliance (`docs/compliance/*`), provenance, closed test.
+1. **Canonicalize** — freeze live path; quarantine orphans; docs match `rumble_arena_back_alley.gd` + `fighter.tscn` + Hitbox path.
+2. **Android offline** — export presets, InputCommand + touch, wire pause; ship single-player loop.
+3. **Backend schema** — lobby fields, appearance object, single `award_match_rep`, auth headers, `matchmaking_queue`.
+4. **Dedicated server** — real tick + authoritative **movement** for two clients.
+5. **Authoritative combat** — server owns Hitbox/`take_damage` outcomes; clients send InputCommand only.
+6. **2-player co-op** — second human on **canonical fighter**; ENet snapshots/events + prediction — **not** `networked_player.gd`.
+7. **AI / revive / weapons** — server-owned; deepen `enemy_ai.gd`; WeaponDefinition separate from PlayerController.
+8. **Waves / boss** — extend `GangSpawner`; server owns progression.
+9. **Matchmaking** — Supabase metadata → dedicated server session → ENet.
+10. **Android online** — touch → InputCommand → prediction → server.
+11. **Performance** — LOD, pools, 5v5 before any 9v9 attempt.
+12. **Security audit** — hostile-input tests.
+13. **Dead-code removal** — only after systems work.
+14. **Content** — six arenas, animations, polish.
+15. **Progression / release** — idempotent server rewards; 100-pass audit.
 
 Detailed gate edges: see `docs/engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md`.
 

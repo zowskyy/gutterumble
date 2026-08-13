@@ -22,7 +22,7 @@ Phases below map to Commands in the revised pack. Execute in order. Do not skip 
 | 7 | 08 | Waves / boss | Extend GangSpawner / round flow |
 | 8 | 09 | Matchmaking | `matchmaking_queue` + lobby SQL |
 | 9 | 10 | Android online | Clients ↔ dedicated server |
-| 10–16 | 11–17 | Per revised pack (below) | Only after 0–9 gates pass |
+| 10–15 | 11–16 | Perf → security → dead code → arenas → progression → 100-pass | Only after 0–9 gates pass |
 
 ---
 
@@ -30,8 +30,12 @@ Phases below map to Commands in the revised pack. Execute in order. Do not skip 
 
 **Exact files written:**
 
+- `docs/engineering/REPOSITORY_AUDIT.md`
+- `docs/engineering/IMPLEMENTATION_DEPENDENCY_GRAPH.md`
 - `docs/engineering/CANONICAL_ARCHITECTURE.md`
 - `docs/engineering/ARCHITECTURE_MIGRATION_PLAN.md`
+- `docs/engineering/COMMAND_AUDIT_LOOP.md`
+- `AGENTS.md` (pointers + critical rules)
 
 **Acceptance:**
 
@@ -225,21 +229,20 @@ rg -n "host_user_id|/matchmaking|matchmaking_queue|award_match_rep" --glob '*.gd
 
 ---
 
-## Phases 10–16 (Commands 11–17) — revised pack
+## Phases 10–15 (Commands 11–16) — revised pack
 
-Execute only after Phases 0–9 acceptance. Titles follow the revised pack sequence:
+Execute only after Phases 0–9 acceptance:
 
 | Phase | Command | Focus |
 |------:|---------|-------|
-| 10 | 11 | Shared-sim extraction hardening (single module boundary offline ≡ server) |
-| 11 | 12 | Progression / unlock economy locked to service_role + LocalProfileStore parity |
-| 12 | 13 | Content arenas (subway / warehouse / parking / burning lot) on canonical spawn path |
-| 13 | 14 | Performance lock (LOD meshes, pool sizes, Pixel 6a 60fps gate) |
-| 14 | 15 | Platform compliance + Data Safety / Privacy final pass |
-| 15 | 16 | Closed test (crash reporter, resume, disconnect) |
-| 16 | 17 | Public release checklist / store rollout |
+| 10 | 11 | Android crowd performance (LOD, pools, 5v5 before 9v9) |
+| 11 | 12 | Security — hostile-input / authority attack suite → `SECURITY_AUDIT.md` |
+| 12 | 13 | Dead-code removal (only after systems work; search refs first) |
+| 13 | 14 | Six arenas (content — **late**) |
+| 14 | 15 | Meta progression / reputation (server-authorized, idempotent) |
+| 15 | 16 | 100-pass forensic release audit |
 
-If the revised pack renames these later, update this table in place — **do not** reorder Phases 0–9.
+If the revised pack renumbers later, update this table — **do not** reorder Phases 0–9.
 
 ---
 
@@ -256,7 +259,7 @@ Command 01 Freeze docs
                         → Command 08 Waves / boss
                             → Command 09 Matchmaking
                                 → Command 10 Android online
-                                    → Commands 11–17 (Phases 10–16)
+                                    → Commands 11–16 (Phases 10–15)
 ```
 
 Parallelism allowed only within a phase when file ownership does not conflict. **Never** parallelize Command 02 deletions with Command 06 net combat.

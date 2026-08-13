@@ -158,7 +158,7 @@ Legend: **KEEP** | **MERGE** | **REPLACE** | **DELETE** | **DEFER**
 | LocalProfileStore | `backend/local_profile_store.gd` | **KEEP** | Offline persistence when Supabase unset |
 | RepPipeline | `systems/rep_pipeline.gd` | **MERGE** toward service_role | Client must not award with anon; align with `award_match_rep` |
 | fighter_lod | `scenes/player/fighter_lod.gd` | **DEFER** | Exists, unwired; blocked on mesh variants |
-| material_manager | `scenes/arenas/back_alley/material_manager.gd` | **KEEP** | Arena material presets (presentation) |
+| material_manager | `scenes/arenas/back_alley/material_manager.gd` | **DEFER** | Present but unwired; wire or archive later — do not invent a second material path |
 | pause_menu | `scenes/ui/pause_menu.gd` + `.tscn` | **KEEP** | Wired by arena |
 | AnimationTreeBuilder | `autoloads/animation_tree_builder.gd` | **KEEP** | Builds fighter AnimationTree at runtime |
 | VFXPool | `autoloads/vfx_pool.gd` | **KEEP** | Hit sparks / trails pool |
