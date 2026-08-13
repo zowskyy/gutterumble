@@ -15,8 +15,9 @@ As of 2026-08-13, **do not follow older multiplayer roadmaps blindly**. Authorit
 
 **Canonical fighter:** `fighter.tscn` + `player_controller.gd` — **not** `networked_player.gd`.  
 **Canonical combat:** Hitbox/Hurtbox + AttackConfig → `take_damage`.  
-**After Command 02:** Command 03 (Android offline) — InputCommand / touch / export presets on branch.  
-**Next:** Command 04 (Supabase reconcile) when Command 03 GATE permits.
+**After Command 02:** Command 03 (Android offline) — merged.  
+**After Command 03:** Command 04 (Supabase reconcile) — on branch / PR.  
+**Next:** Command 05 (dedicated server movement) when Command 04 GATE permits.
 
 ## Current snapshot
 
