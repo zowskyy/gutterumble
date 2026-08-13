@@ -1,7 +1,6 @@
 # GUTTERUMBLE — Public Release Roadmap
 
-**Source of truth for slice status:** [`TRACKING.json`](../TRACKING.json)  
-**Workflow:** Taylor worker + Frontier relay (see [`.cursor/rules/taylor-worker-frontier-relay.mdc`](../.cursor/rules/taylor-worker-frontier-relay.mdc))
+**Source of truth for slice status:** [`TRACKING.json`](../TRACKING.json)
 
 Engine: Godot 4.x (GDScript, static typing) · Backend: Supabase · Target: Android / Pixel 6a @ 60fps
 
@@ -10,10 +9,9 @@ Each slice is 1–4 hours. No slice is `MERGED` until independently verified aga
 ## How to use
 
 1. Pick the next `NOT_STARTED` or `IN_PROGRESS` slice in `TRACKING.json` (phase order).
-2. Quarterback delegates implementation to a **Taylor worker** (Task subagent).
-3. Worker implements + gates; quarterback **re-runs both gate scripts** (Frontier relay) on every changed file.
-4. Commit with the slice's `git_commit` message.
-5. Mark `VERIFIED` only after verification steps pass — not on code-complete alone.
+2. Implement and verify against the slice's verification steps.
+3. Commit with the slice's `git_commit` message.
+4. Mark `VERIFIED` only after verification steps pass — not on code-complete alone.
 
 ## Phase overview
 
