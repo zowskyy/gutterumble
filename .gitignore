@@ -2,7 +2,8 @@
 .godot/
 *.uid
 *.import
-android/
+# Godot Android custom build template (project root only — not docs/android/)
+/android/
 export/
 build/
 
