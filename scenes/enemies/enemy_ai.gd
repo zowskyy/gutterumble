@@ -16,6 +16,10 @@ extends CharacterBody3D
 @export var approach_stop_dist: float = 1.3   # stops moving when closer than this
 @export var decision_interval: float  = 0.4   # seconds between AI decisions
 @export var dodge_chance: float       = 0.18  # probability of dodging instead of attacking
+@export var lane_mode: bool = true
+@export var lane_axis: Vector3 = Vector3(1, 0, 0)  # fight axis (world X)
+@export var lane_z: float = NAN  # if finite, lock global Z to this
+@export var face_opponent: Node3D = null
 
 signal health_changed(new_hp: float, max_hp: float)
 signal died
@@ -37,6 +41,8 @@ var is_staggered: bool                        = false
 var _stagger_timer: float                     = 0.0
 
 var _target: Node3D = null
+var facing_right: bool = false
+var _sprite_visual: Node = null
 
 # ── Node refs ─────────────────────────────────────────────────────────────────
 @onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
@@ -61,11 +67,19 @@ var _visible_on_screen: bool = true
 
 func _ready() -> void:
 	health = max_health
-	_anim_tree = get_node_or_null("AnimationTree")
-	if _anim_tree == null:
-		_anim_tree = AnimationTreeBuilder.setup(self)
-	if _anim_tree:
-		_anim_sm = _anim_tree.get("parameters/playback")
+	_sprite_visual = get_node_or_null("SpriteVisual")
+	if _sprite_visual != null and _sprite_visual.has_method("setup"):
+		_sprite_visual.setup(
+			"res://assets/characters/sprite_fighter/enemy_sheet.png",
+			"res://assets/characters/sprite_fighter/fighter_anim_meta.json"
+		)
+		# Sprite fighter — skip AnimationTreeBuilder / skeletal tree.
+	else:
+		_anim_tree = get_node_or_null("AnimationTree")
+		if _anim_tree == null:
+			_anim_tree = AnimationTreeBuilder.setup(self)
+		if _anim_tree:
+			_anim_sm = _anim_tree.get("parameters/playback")
 	if _hitbox:
 		_hitbox.hit_landed.connect(_on_hitbox_hit_landed)
 	_setup_trails()
@@ -95,6 +109,67 @@ func _setup_trails() -> void:
 func set_target(target: Node3D) -> void:
 	_target = target
 
+func set_lane(z: float, opponent: Node3D = null) -> void:
+	lane_mode = true
+	lane_z = z
+	if opponent != null:
+		face_opponent = opponent
+		_target = opponent
+	global_position.z = z
+	_apply_lane_facing()
+
+func _lock_lane_z() -> void:
+	if lane_mode and is_finite(lane_z):
+		global_position.z = lane_z
+		velocity.z = 0.0
+
+func _lane_axis_n() -> Vector3:
+	var a := lane_axis
+	a.y = 0.0
+	if a.length_squared() < 0.0001:
+		return Vector3(1, 0, 0)
+	return a.normalized()
+
+func _apply_lane_facing() -> void:
+	var opp := face_opponent if face_opponent != null else _target
+	if opp != null and is_instance_valid(opp):
+		facing_right = opp.global_position.x >= global_position.x
+	if _sprite_visual != null:
+		rotation.y = 0.0
+		if _sprite_visual.has_method("set_facing_right"):
+			_sprite_visual.set_facing_right(facing_right)
+		elif _sprite_visual.has_method("set_flip_h"):
+			_sprite_visual.set_flip_h(not facing_right)
+		elif "flip_h" in _sprite_visual:
+			_sprite_visual.flip_h = not facing_right
+	else:
+		rotation.y = 0.0 if facing_right else PI
+
+func _update_sprite_anim() -> void:
+	if _sprite_visual == null:
+		return
+	var CS := AttackConfig.CombatState
+	var anim := "idle"
+	match combat_state:
+		CS.IDLE:
+			anim = "idle"
+		CS.LOCOMOTION:
+			anim = "walk"
+		CS.ATTACK_LIGHT:
+			anim = "punch_light"
+		CS.ATTACK_HEAVY:
+			anim = "kick"
+		CS.HIT_REACT:
+			anim = "hit"
+		CS.KO:
+			anim = "ko"
+		CS.DODGE:
+			anim = "walk"
+	if _sprite_visual.has_method("play_anim"):
+		_sprite_visual.play_anim(anim)
+	elif _sprite_visual.has_method("play"):
+		_sprite_visual.play(anim)
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 func _physics_process(delta: float) -> void:
 	_tick_phase(delta)
@@ -105,6 +180,7 @@ func _physics_process(delta: float) -> void:
 			return
 		AIState.HIT_REACT:
 			move_and_slide()
+			_lock_lane_z()
 			return
 		AIState.ATTACK:
 			return  # phase timer drives the attack to completion
@@ -112,6 +188,7 @@ func _physics_process(delta: float) -> void:
 		return   # off-screen — skip AI/movement, phase timer above still ticks
 	_run_ai(delta)
 	move_and_slide()
+	_lock_lane_z()
 
 func _tick_stagger(delta: float) -> void:
 	if not is_staggered:
@@ -124,13 +201,18 @@ func _tick_stagger(delta: float) -> void:
 func _run_ai(delta: float) -> void:
 	if is_staggered:
 		move_and_slide()
+		_lock_lane_z()
 		return
 	if _target == null or (_target.has_method("is_dead") and _target.is_dead()):
 		_go_idle()
 		return
 
 	var flat_target := Vector3(_target.global_position.x, global_position.y, _target.global_position.z)
-	var dist := global_position.distance_to(flat_target)
+	var dist: float
+	if lane_mode:
+		dist = absf(_target.global_position.x - global_position.x)
+	else:
+		dist = global_position.distance_to(flat_target)
 
 	if dist <= attack_range and _decision_timer <= 0.0:
 		_decision_timer = decision_interval
@@ -157,15 +239,25 @@ func _maybe_bark() -> void:
 
 func _approach(flat_target: Vector3, delta: float) -> void:
 	ai_state = AIState.APPROACH
+	combat_state = AttackConfig.CombatState.LOCOMOTION
 	_maybe_bark()
 	_travel(AttackConfig.ANIM_LOCOMOTION_TREE)
-	var dir := (flat_target - global_position).normalized()
-	velocity = velocity.lerp(dir * move_speed, 14.0 * delta)
-	if dir.length() > 0.01:
-		rotation.y = atan2(dir.x, dir.z)
+	if lane_mode:
+		var axis := _lane_axis_n()
+		var along: float = (flat_target - global_position).dot(axis)
+		var dir := axis * signf(along) if absf(along) > 0.05 else Vector3.ZERO
+		velocity = velocity.lerp(dir * move_speed, 14.0 * delta)
+		velocity.z = 0.0
+		_apply_lane_facing()
+	else:
+		var dir := (flat_target - global_position).normalized()
+		velocity = velocity.lerp(dir * move_speed, 14.0 * delta)
+		if dir.length() > 0.01:
+			rotation.y = atan2(dir.x, dir.z)
 	var norm_spd: float = clampf(velocity.length() / move_speed, 0.0, 1.0)
 	if _anim_tree:
 		_anim_tree.set("parameters/locomotion_tree/blend_space/blend_position", norm_spd)
+	_update_sprite_anim()
 
 func _go_idle() -> void:
 	ai_state = AIState.IDLE
@@ -173,6 +265,10 @@ func _go_idle() -> void:
 	_maybe_bark()
 	_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)
 	velocity = velocity.lerp(Vector3.ZERO, 0.25)
+	if lane_mode:
+		velocity.z = 0.0
+		_apply_lane_facing()
+	_update_sprite_anim()
 
 # ── Attack ────────────────────────────────────────────────────────────────────
 func _start_attack() -> void:
@@ -188,7 +284,9 @@ func _start_attack() -> void:
 	attack_phase      = AttackConfig.AttackPhase.WINDUP
 	velocity          = Vector3.ZERO
 	# Face the target before swinging
-	if _target:
+	if lane_mode:
+		_apply_lane_facing()
+	elif _target:
 		var flat_dir := Vector3(_target.global_position.x - global_position.x, 0.0, _target.global_position.z - global_position.z).normalized()
 		if flat_dir.length() > 0.01:
 			rotation.y = atan2(flat_dir.x, flat_dir.z)
@@ -205,8 +303,15 @@ func _start_dodge() -> void:
 	attack_phase      = AttackConfig.AttackPhase.WINDUP
 	current_attack_id = "dodge_roll_fwd"
 	invulnerable      = true
-	var away := (global_position - _target.global_position).normalized()
-	_dodge_dir        = Vector3(away.x, 0.0, away.z)
+	if lane_mode:
+		var axis := _lane_axis_n()
+		var away_sign := signf(global_position.x - _target.global_position.x)
+		if away_sign == 0.0:
+			away_sign = -1.0 if facing_right else 1.0
+		_dodge_dir = axis * away_sign
+	else:
+		var away := (global_position - _target.global_position).normalized()
+		_dodge_dir = Vector3(away.x, 0.0, away.z)
 	_begin_phase(AttackConfig.ATTACK_DATA["dodge_roll_fwd"].windup_time)
 	_travel(AttackConfig.ANIM_DODGE)
 
@@ -255,6 +360,24 @@ func _end_attack() -> void:
 	velocity          = Vector3.ZERO
 
 # ── Hitbox ────────────────────────────────────────────────────────────────────
+func _position_lane_hitbox(anim_key: String) -> void:
+	if not lane_mode or _hitbox == null:
+		return
+	var shape := _hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if shape == null:
+		return
+	var offset := Vector3(0.55, 0.9, 0.0)
+	var radius := 0.5
+	if _sprite_visual != null and _sprite_visual.has_method("get_hit_data"):
+		var hd: Dictionary = _sprite_visual.get_hit_data(anim_key)
+		if not hd.is_empty():
+			offset = hd.get("hit_offset", offset) as Vector3
+			radius = float(hd.get("hit_radius", radius))
+	var sign_x: float = 1.0 if facing_right else -1.0
+	shape.position = Vector3(offset.x * sign_x, offset.y, 0.0)
+	if shape.shape is SphereShape3D:
+		(shape.shape as SphereShape3D).radius = radius
+
 func _set_hitbox(active: bool) -> void:
 	if _trail_r:
 		_trail_r.set_active(active)
@@ -268,6 +391,10 @@ func _set_hitbox(active: bool) -> void:
 		# validate attack id before enabling hitbox — usage: active phase only
 		var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 		var frames: int = maxi(3, int(data.active_time / (1.0 / 60.0)))
+		var anim_key := "punch_light"
+		if combat_state == AttackConfig.CombatState.ATTACK_HEAVY:
+			anim_key = "kick"
+		_position_lane_hitbox(anim_key)
 		_hitbox.set_active_frames(frames)
 		_hitbox.begin_swing(data.damage, data.knockback)
 	else:
@@ -278,7 +405,10 @@ func _apply_hit_knockback(target: CharacterBody3D, attack_id: String, data: Dict
 	var flat_target := Vector3(target.global_position.x, 0.0, target.global_position.z)
 	var dir := (flat_target - flat_self).normalized()
 	if dir.length() < 0.01:
-		dir = -Vector3(global_transform.basis.z).normalized()
+		if lane_mode:
+			dir = Vector3(1.0 if facing_right else -1.0, 0.0, 0.0)
+		else:
+			dir = -Vector3(global_transform.basis.z).normalized()
 	var impulse: float = data.knockback
 	target.velocity += dir * impulse
 	var weight: String = AttackConfig.get_attack_weight(attack_id, data.damage)
@@ -343,6 +473,9 @@ func _enter_ko() -> void:
 
 # ── AnimationTree helper ──────────────────────────────────────────────────────
 func _travel(state: String) -> void:
+	_update_sprite_anim()
+	if _sprite_visual != null:
+		return
 	if _anim_sm == null and _anim_tree:
 		# Self-healing — see identical comment in player_controller.gd.
 		_anim_sm = _anim_tree.get("parameters/playback")

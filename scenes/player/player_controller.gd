@@ -21,6 +21,10 @@ extends CharacterBody3D
 @export var friction: float    = 15.0
 @export var turn_speed: float  = 12.0
 @export var dodge_speed: float = 9.0
+@export var lane_mode: bool = true
+@export var lane_axis: Vector3 = Vector3(1, 0, 0)  # fight axis (world X)
+@export var lane_z: float = NAN  # if finite, lock global Z to this
+@export var face_opponent: Node3D = null
 
 signal health_changed(new_hp: float, max_hp: float)
 signal died
@@ -47,6 +51,8 @@ var _special_lockout: float = 0.0
 var is_staggered: bool   = false
 var _stagger_timer: float = 0.0
 var _frame_cmd: InputCommand = null
+var facing_right: bool = true
+var _sprite_visual: Node = null
 
 # ── Node refs (null-safe) ─────────────────────────────────────────────────────
 @onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
@@ -57,11 +63,19 @@ var _trail_l: AttackTrail
 
 func _ready() -> void:
 	health = max_health
-	_anim_tree = get_node_or_null("AnimationTree")
-	if _anim_tree == null:
-		_anim_tree = AnimationTreeBuilder.setup(self)
-	if _anim_tree:
-		_anim_sm = _anim_tree.get("parameters/playback")
+	_sprite_visual = get_node_or_null("SpriteVisual")
+	if _sprite_visual != null and _sprite_visual.has_method("setup"):
+		_sprite_visual.setup(
+			"res://assets/characters/sprite_fighter/player_sheet.png",
+			"res://assets/characters/sprite_fighter/fighter_anim_meta.json"
+		)
+		# Sprite fighter — skip AnimationTreeBuilder / skeletal tree.
+	else:
+		_anim_tree = get_node_or_null("AnimationTree")
+		if _anim_tree == null:
+			_anim_tree = AnimationTreeBuilder.setup(self)
+		if _anim_tree:
+			_anim_sm = _anim_tree.get("parameters/playback")
 	if _hitbox:
 		_hitbox.hit_landed.connect(_on_hitbox_hit_landed)
 	_setup_trails()
@@ -75,6 +89,7 @@ func _ready() -> void:
 	# team-color pass runs after this and intentionally overrides clothing
 	# (not skin/hair) with a flat team color for crowd readability — skin
 	# tone and hairstyle customization stay visible in both modes.
+	# No-ops without MouseModel meshes (sprite fighters).
 	CustomizationManager.apply_to_fighter(self, SaveManager.load_appearance())
 
 func _setup_trails() -> void:
@@ -102,6 +117,7 @@ func _physics_process(delta: float) -> void:
 	_try_activate_special()
 	_update_fsm(delta)
 	move_and_slide()
+	_lock_lane_z()
 
 func _expire_input_buffer() -> void:
 	var cutoff: int = Time.get_ticks_msec() - int(INPUT_BUFFER_SECS * 1000.0)
@@ -186,6 +202,8 @@ func _update_fsm(delta: float) -> void:
 			return
 		CS.DODGE:
 			velocity = _dodge_dir * dodge_speed
+			if lane_mode:
+				velocity.z = 0.0
 			return
 		CS.ATTACK_LIGHT, CS.ATTACK_HEAVY:
 			_handle_active_attack()
@@ -194,23 +212,95 @@ func _update_fsm(delta: float) -> void:
 	_handle_locomotion(delta)
 
 # ── Locomotion ────────────────────────────────────────────────────────────────
+func set_lane(z: float, opponent: Node3D = null) -> void:
+	lane_mode = true
+	lane_z = z
+	if opponent != null:
+		face_opponent = opponent
+	global_position.z = z
+	_apply_lane_facing()
+
+func _lock_lane_z() -> void:
+	if lane_mode and is_finite(lane_z):
+		global_position.z = lane_z
+		velocity.z = 0.0
+
+func _lane_axis_n() -> Vector3:
+	var a := lane_axis
+	a.y = 0.0
+	if a.length_squared() < 0.0001:
+		return Vector3(1, 0, 0)
+	return a.normalized()
+
+func _apply_lane_facing() -> void:
+	if face_opponent != null and is_instance_valid(face_opponent):
+		facing_right = face_opponent.global_position.x >= global_position.x
+	if _sprite_visual != null:
+		# Billboards/sprites: keep body rotation.y = 0; flip the sprite.
+		rotation.y = 0.0
+		if _sprite_visual.has_method("set_facing_right"):
+			_sprite_visual.set_facing_right(facing_right)
+		elif _sprite_visual.has_method("set_flip_h"):
+			_sprite_visual.set_flip_h(not facing_right)
+		elif "flip_h" in _sprite_visual:
+			_sprite_visual.flip_h = not facing_right
+	else:
+		# 3D skeletal compat without sprite: face along +X / -X.
+		rotation.y = 0.0 if facing_right else PI
+
+func _update_sprite_anim() -> void:
+	if _sprite_visual == null:
+		return
+	var CS := AttackConfig.CombatState
+	var anim := "idle"
+	match combat_state:
+		CS.IDLE:
+			anim = "idle"
+		CS.LOCOMOTION:
+			anim = "walk"
+		CS.ATTACK_LIGHT:
+			anim = "punch_light"
+		CS.ATTACK_HEAVY:
+			anim = "kick"
+		CS.HIT_REACT:
+			anim = "hit"
+		CS.KO:
+			anim = "ko"
+		CS.DODGE:
+			anim = "walk"
+	if _sprite_visual.has_method("play_anim"):
+		_sprite_visual.play_anim(anim)
+	elif _sprite_visual.has_method("play"):
+		_sprite_visual.play(anim)
+
+func _dodge_dir_from_input(iv: Vector2) -> Vector3:
+	if lane_mode:
+		var axis := _lane_axis_n()
+		if absf(iv.x) > 0.05:
+			return axis * signf(iv.x)
+		return axis * (1.0 if facing_right else -1.0)
+	if iv.length() > 0.05:
+		return Vector3(iv.x, 0.0, iv.y)
+	return Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, rotation.y)
+
 func _handle_locomotion(delta: float) -> void:
 	if is_staggered:
 		return
 	var iv := _frame_cmd.move if _frame_cmd else Vector2.ZERO
 
 	if _has_buffered(BUFFER_ACTION_DODGE):
-		var dodge_dir: Vector3
-		if iv.length() > 0.05:
-			dodge_dir = Vector3(iv.x, 0.0, iv.y)
-		else:
-			dodge_dir = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, rotation.y)
 		_consume_buffered(BUFFER_ACTION_DODGE)
-		_start_dodge(dodge_dir)
+		_start_dodge(_dodge_dir_from_input(iv))
 		return
 
-	if _frame_cmd and _frame_cmd.dodge and iv.length() > 0.05:
-		_start_dodge(Vector3(iv.x, 0.0, iv.y))
+	if _frame_cmd and _frame_cmd.dodge and (
+		(lane_mode and absf(iv.x) > 0.05) or (not lane_mode and iv.length() > 0.05)
+	):
+		_start_dodge(_dodge_dir_from_input(iv))
+		return
+
+	if lane_mode:
+		_handle_lane_locomotion(delta, iv)
 		return
 
 	if iv.length() > 0.05:
@@ -228,6 +318,31 @@ func _handle_locomotion(delta: float) -> void:
 	var norm_spd: float = clampf(Vector2(velocity.x, velocity.z).length() / run_speed, 0.0, 1.0)
 	if _anim_tree:
 		_anim_tree.set("parameters/locomotion_tree/blend_space/blend_position", norm_spd)
+
+func _handle_lane_locomotion(delta: float, iv: Vector2) -> void:
+	# Fight-axis move from iv.x. iv.y ignored for world Z (lane lock).
+	var axis := _lane_axis_n()
+	if absf(iv.x) > 0.05:
+		var dir := axis * iv.x
+		velocity = velocity.lerp(dir * run_speed, acceleration * delta)
+		velocity.z = 0.0
+		if face_opponent == null or not is_instance_valid(face_opponent):
+			facing_right = iv.x > 0.0
+		_apply_lane_facing()
+		combat_state = AttackConfig.CombatState.LOCOMOTION
+		_travel(AttackConfig.ANIM_LOCOMOTION_TREE)
+	else:
+		velocity = velocity.lerp(Vector3.ZERO, friction * delta)
+		velocity.z = 0.0
+		_apply_lane_facing()
+		if velocity.length() < 0.05:
+			combat_state = AttackConfig.CombatState.IDLE
+			_travel(AttackConfig.ANIM_LOCOMOTION_IDLE)
+
+	var norm_spd: float = clampf(absf(velocity.dot(axis)) / run_speed, 0.0, 1.0)
+	if _anim_tree:
+		_anim_tree.set("parameters/locomotion_tree/blend_space/blend_position", norm_spd)
+	_update_sprite_anim()
 
 # ── Special (Musou-style AOE) ─────────────────────────────────────────────────
 # Not routed through the windup/active/recovery phase system — it's an
@@ -332,12 +447,7 @@ func _handle_active_attack() -> void:
 	if _has_buffered(BUFFER_ACTION_DODGE) and _can_cancel_into("dodge_roll_fwd"):
 		_consume_buffered(BUFFER_ACTION_DODGE)
 		var iv := _frame_cmd.move if _frame_cmd else Vector2.ZERO
-		var dodge_dir: Vector3
-		if iv.length() > 0.05:
-			dodge_dir = Vector3(iv.x, 0.0, iv.y)
-		else:
-			dodge_dir = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, rotation.y)
-		_start_dodge(dodge_dir)
+		_start_dodge(_dodge_dir_from_input(iv))
 
 func _can_cancel_into(next_id: String) -> bool:
 	if not AttackConfig.ATTACK_DATA.has(current_attack_id):
@@ -399,6 +509,25 @@ func _end_attack() -> void:
 	combat_state = AttackConfig.CombatState.IDLE
 
 # ── Hitbox enable/disable ─────────────────────────────────────────────────────
+func _position_lane_hitbox(anim_key: String) -> void:
+	# Side-view sprites strike along +X/-X; meta hit_offset is in facing-local space.
+	if not lane_mode or _hitbox == null:
+		return
+	var shape := _hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if shape == null:
+		return
+	var offset := Vector3(0.55, 0.9, 0.0)
+	var radius := 0.5
+	if _sprite_visual != null and _sprite_visual.has_method("get_hit_data"):
+		var hd: Dictionary = _sprite_visual.get_hit_data(anim_key)
+		if not hd.is_empty():
+			offset = hd.get("hit_offset", offset) as Vector3
+			radius = float(hd.get("hit_radius", radius))
+	var sign_x: float = 1.0 if facing_right else -1.0
+	shape.position = Vector3(offset.x * sign_x, offset.y, 0.0)
+	if shape.shape is SphereShape3D:
+		(shape.shape as SphereShape3D).radius = radius
+
 func _set_hitbox(active: bool) -> void:
 	if _trail_r:
 		_trail_r.set_active(active)
@@ -411,6 +540,10 @@ func _set_hitbox(active: bool) -> void:
 			return
 		var data: Dictionary = AttackConfig.ATTACK_DATA[current_attack_id]
 		var frames: int = maxi(3, int(data.active_time / (1.0 / 60.0)))
+		var anim_key := "punch_light"
+		if combat_state == AttackConfig.CombatState.ATTACK_HEAVY:
+			anim_key = "kick"
+		_position_lane_hitbox(anim_key)
 		_hitbox.set_active_frames(frames)
 		_hitbox.begin_swing(data.damage, data.knockback)
 	else:
@@ -421,7 +554,10 @@ func _apply_hit_knockback(target: CharacterBody3D, attack_id: String, data: Dict
 	var flat_target := Vector3(target.global_position.x, 0.0, target.global_position.z)
 	var dir := (flat_target - flat_self).normalized()
 	if dir.length() < 0.01:
-		dir = -Vector3(global_transform.basis.z).normalized()
+		if lane_mode:
+			dir = Vector3(1.0 if facing_right else -1.0, 0.0, 0.0)
+		else:
+			dir = -Vector3(global_transform.basis.z).normalized()
 	var impulse: float = data.knockback
 	target.velocity += dir * impulse
 	var weight: String = AttackConfig.get_attack_weight(attack_id, data.damage)
@@ -490,6 +626,9 @@ func _enter_ko() -> void:
 
 # ── AnimationTree helpers ─────────────────────────────────────────────────────
 func _travel(state: String) -> void:
+	_update_sprite_anim()
+	if _sprite_visual != null:
+		return
 	if _anim_sm == null and _anim_tree:
 		# Self-healing: if the AnimationTree's parameter cache wasn't ready
 		# yet the one time this was fetched in _ready() (e.g. queried in the

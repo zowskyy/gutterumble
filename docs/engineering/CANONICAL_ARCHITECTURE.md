@@ -15,10 +15,14 @@ This document freezes **THE** canonical path per category. Duplicate / orphan sy
 
 | Role | Canonical path | Symbol / note |
 |------|----------------|---------------|
-| Scene | `scenes/player/fighter.tscn` | Instantiated by `rumble_arena_back_alley.gd` and `GangSpawner` |
-| Script / FSM | `scenes/player/player_controller.gd` | `PlayerController` combat + locomotion FSM |
+| Scene (live arena) | `scenes/player/sprite_fighter.tscn` | 2.5D lane + true 2D `AnimatedSprite3D`; spawned by arenas / pool |
+| Script / FSM | `scenes/player/player_controller.gd` | Combat + lane locomotion FSM (shared with legacy skeletal path) |
+| Visual | `scenes/player/sprite_visual.gd` + `assets/characters/sprite_fighter/` | Sheet + `fighter_anim_meta.json` |
+| Legacy skeletal | `scenes/player/fighter.tscn` + `mouse.glb` | Kept for reference; **not** arena-spawned |
 | **Not canonical** | `scenes/player/networked_player.gd` | Obsolete parallel player path (RPCs stubbed) |
 | **Not canonical** | `scenes/player/player.tscn` | Wraps `networked_player.gd` — do not spawn in arenas |
+
+See also: [`SPRITE_FIGHTER_25D.md`](./SPRITE_FIGHTER_25D.md).
 
 ### COMBAT
 

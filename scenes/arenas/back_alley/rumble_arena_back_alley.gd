@@ -7,8 +7,8 @@ enum MatchState { SETUP, COUNTDOWN, FIGHTING, ROUND_END, ENDED }
 
 signal match_ended(player_won: bool)
 
-const PLAYER_SCENE := preload("res://scenes/player/fighter.tscn")
-const ENEMY_SCENE  := preload("res://scenes/enemies/mouse_enemy.tscn")
+const PLAYER_SCENE := preload("res://scenes/player/sprite_fighter.tscn")
+const ENEMY_SCENE  := preload("res://scenes/enemies/sprite_enemy.tscn")
 const PAUSE_SCENE  := preload("res://scenes/ui/pause_menu.tscn")
 const TOUCH_SCENE  := preload("res://scenes/ui/touch_controls.tscn")
 
@@ -115,10 +115,22 @@ func _spawn_classic_mode() -> void:
 		_enemy.set_target(_player)
 	_connect_enemy(_enemy)
 
-	# Face each other
-	var gap := _enemy_spawn.global_position - _player_spawn.global_position
-	_player.rotation.y = atan2(gap.x, gap.z)
-	_enemy.rotation.y  = atan2(-gap.x, -gap.z)
+	# Align both spawns onto the shared fight lane (XZ side-view).
+	var lane_z: float = (_player_spawn.global_position.z + _enemy_spawn.global_position.z) * 0.5
+	if _player.has_method("set_lane"):
+		_player.set_lane(lane_z, _enemy)
+	if _enemy.has_method("set_lane"):
+		_enemy.set_lane(lane_z, _player)
+	# Face along X: player on left faces right; enemy on right faces left.
+	# set_lane already applied facing from opponent X; reinforce for spawn order.
+	if "facing_right" in _player:
+		_player.facing_right = true
+	if "facing_right" in _enemy:
+		_enemy.facing_right = false
+	if _player.has_method("_apply_lane_facing"):
+		_player._apply_lane_facing()
+	if _enemy.has_method("_apply_lane_facing"):
+		_enemy._apply_lane_facing()
 
 	_sync_hp_bars()
 	_last_player_hp = _player.max_health
@@ -158,7 +170,18 @@ func _spawn_warriors_mode() -> void:
 	_connect_player(_player)
 	_last_player_hp = _player.max_health
 	GangSpawner.spawn_wave()
-	_camera.call_deferred("set_targets", _player, _player)   # will update when enemies spawn
+	var lane_z: float = _player_spawn.global_position.z
+	var first_enemy: Node3D = null
+	for child in get_children():
+		if child == _player:
+			continue
+		if child.has_method("set_lane") and child.has_method("set_target"):
+			if first_enemy == null:
+				first_enemy = child
+			child.set_lane(lane_z, _player)
+	if _player.has_method("set_lane"):
+		_player.set_lane(lane_z, first_enemy)
+	_camera.call_deferred("set_targets", _player, first_enemy if first_enemy else _player)
 
 # ── Signal wiring (guarded — pooled instances are reused, connecting twice
 #    without a guard would fire every callback multiple times per event) ──────
