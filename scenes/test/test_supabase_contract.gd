@@ -54,12 +54,12 @@ func _test_appearance_dictionary_local() -> void:
 	if not SupabaseManager.use_local_fallback:
 		_assert(false, "expected local fallback for appearance test")
 		return
+	var store: Node = SupabaseManager.get_node_or_null("LocalProfileStore")
+	if store == null:
+		_assert(false, "LocalProfileStore missing under SupabaseManager")
+		return
 	var user_id: String = "contract_user_%d" % Time.get_ticks_msec()
-	var char_id: String = ""
-	var handler := func(cid: String) -> void:
-		char_id = cid
-	SupabaseManager.character_created.connect(handler, CONNECT_ONE_SHOT)
-	SupabaseManager.create_character(user_id, {"name": "ContractFighter", "appearance": {}})
+	var char_id: String = store.create_character(user_id, {"name": "ContractFighter", "appearance": {}})
 	_assert(not char_id.is_empty(), "local character created")
 	var appearance: Dictionary = {
 		"skin_idx": 1,
@@ -70,35 +70,34 @@ func _test_appearance_dictionary_local() -> void:
 		"gang_idx": 0,
 		"gang_color": "#aabbcc",
 	}
+	# Typed Dictionary path exercised by SupabaseManager public API.
 	SupabaseManager.update_character(char_id, appearance)
-	var rows: Array = []
-	var loaded := func(data: Array) -> void:
-		rows = data
-	SupabaseManager.characters_loaded.connect(loaded, CONNECT_ONE_SHOT)
-	SupabaseManager.get_characters(user_id)
+	var rows: Array = store.get_characters(user_id)
 	var found: bool = false
 	for row in rows:
 		if row is Dictionary and str(row.get("id", "")) == char_id:
-			var got: Variant = row.get("appearance", {})
+			var got: Variant = row.get("appearance", null)
 			found = got is Dictionary and int((got as Dictionary).get("skin_idx", -1)) == 1
 			break
 	_assert(found, "appearance update_character accepts Dictionary locally")
 
 func _test_rep_pipeline_local_once() -> void:
-	if not RepPipeline:
+	if RepPipeline == null:
 		_assert(false, "RepPipeline autoload missing")
 		return
 	RepPipeline.reset_session()
-	var awarded: bool = false
+	var state: Dictionary = {"awarded": false, "delta": -1}
 	var handler := func(_uid: String, delta: int, _rid: String) -> void:
-		awarded = delta == RepPipeline.WIN_REP
+		state["delta"] = delta
+		state["awarded"] = (delta == RepPipeline.WIN_REP)
 	RepPipeline.rep_awarded.connect(handler)
 	var match_id: String = "contract_match_%d" % Time.get_ticks_msec()
 	RepPipeline.submit_match_result(match_id, "contract_rep_user", true, {"arena": "back_alley"})
 	await get_tree().process_frame
-	_assert(awarded, "RepPipeline local submit awards once")
+	_assert(bool(state["awarded"]), "RepPipeline local submit awards once")
 	_assert(RepPipeline.has_submitted(match_id, "contract_rep_user"), "submission tracked")
-	RepPipeline.rep_awarded.disconnect(handler)
+	if RepPipeline.rep_awarded.is_connected(handler):
+		RepPipeline.rep_awarded.disconnect(handler)
 
 func get_test_diagnostic() -> String:
 	return "pass=%d fail=%d" % [_pass_count, _fail_count]

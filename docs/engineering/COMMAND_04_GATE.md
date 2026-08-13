@@ -26,8 +26,8 @@ Files changed:
   scenes/test/test_supabase_contract.tscn
   .github/workflows/godot-ci.yml
 Tests executed:
-  scenes/test/test_supabase_contract.tscn
-  scenes/test/test_rep_pipeline.tscn
-  existing godot-ci suite still listed
+  scenes/test/test_supabase_contract.tscn — PASS=12 FAIL=0
+  scenes/test/test_rep_pipeline.tscn — PASS=3 FAIL=0 (await fix so asserts actually run)
+  existing godot-ci suite still listed (+ test_supabase_contract.tscn)
 Next command permitted: YES (Command 05) after this PR lands and supabase contract + rep pipeline regression are green in CI
 ```
