@@ -9,7 +9,7 @@ extends CharacterBody3D
 #   attack_heavy    (default: X key)
 #   dodge           (default: Space)
 #   special_attack  (default: C key) — Musou-style AOE, gated by SpecialMeter
-# Falls back to key checks if actions are not defined.
+# Gameplay intent comes from InputRouter.consume_command() once per physics frame.
 # Input buffer provides fair, transparent responsiveness during attack lockout windows.
 # Buffered attack/dodge inputs retry within INPUT_BUFFER_SECS during lockout.
 # @export movement tunables; revert defaults to rollback prior feel. Optional debug logging.
@@ -46,6 +46,7 @@ var _phase_dur: float    = 0.0
 var _special_lockout: float = 0.0
 var is_staggered: bool   = false
 var _stagger_timer: float = 0.0
+var _frame_cmd: InputCommand = null
 
 # ── Node refs (null-safe) ─────────────────────────────────────────────────────
 @onready var _hitbox: Hitbox = get_node_or_null("Hitbox") as Hitbox
@@ -96,6 +97,7 @@ func _physics_process(delta: float) -> void:
 	_tick_stagger(delta)
 	_tick_special_lockout(delta)
 	_expire_input_buffer()
+	_frame_cmd = InputRouter.consume_command()
 	_collect_input()
 	_try_activate_special()
 	_update_fsm(delta)
@@ -161,11 +163,13 @@ func _collect_input() -> void:
 		return
 	if not _should_buffer_inputs():
 		return
-	if _action_just_pressed("attack_light", KEY_Z):
+	if _frame_cmd == null:
+		return
+	if _frame_cmd.light:
 		_push_input_buffer(BUFFER_ACTION_LIGHT)
-	if _action_just_pressed("attack_heavy", KEY_X):
+	if _frame_cmd.heavy:
 		_push_input_buffer(BUFFER_ACTION_HEAVY)
-	if _action_just_pressed("dodge", KEY_SPACE):
+	if _frame_cmd.dodge:
 		_push_input_buffer(BUFFER_ACTION_DODGE)
 
 # ── FSM top level ─────────────────────────────────────────────────────────────
@@ -193,7 +197,7 @@ func _update_fsm(delta: float) -> void:
 func _handle_locomotion(delta: float) -> void:
 	if is_staggered:
 		return
-	var iv := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var iv := _frame_cmd.move if _frame_cmd else Vector2.ZERO
 
 	if _has_buffered(BUFFER_ACTION_DODGE):
 		var dodge_dir: Vector3
@@ -205,7 +209,7 @@ func _handle_locomotion(delta: float) -> void:
 		_start_dodge(dodge_dir)
 		return
 
-	if _action_just_pressed("dodge", KEY_SPACE) and iv.length() > 0.05:
+	if _frame_cmd and _frame_cmd.dodge and iv.length() > 0.05:
 		_start_dodge(Vector3(iv.x, 0.0, iv.y))
 		return
 
@@ -239,7 +243,7 @@ func _try_activate_special() -> void:
 		return
 	if combat_state == AttackConfig.CombatState.KO:
 		return
-	if not _action_just_pressed("special_attack", KEY_C):
+	if _frame_cmd == null or not _frame_cmd.special:
 		return
 	if not SpecialMeter.try_activate():
 		return
@@ -285,11 +289,13 @@ func _do_special_aoe() -> void:
 func _try_start_attack() -> void:
 	if is_staggered:
 		return
-	if _has_buffered(BUFFER_ACTION_LIGHT) or _action_just_pressed("attack_light", KEY_Z):
+	var light_edge: bool = _frame_cmd != null and _frame_cmd.light
+	var heavy_edge: bool = _frame_cmd != null and _frame_cmd.heavy
+	if _has_buffered(BUFFER_ACTION_LIGHT) or light_edge:
 		if _has_buffered(BUFFER_ACTION_LIGHT):
 			_consume_buffered(BUFFER_ACTION_LIGHT)
 		_start_light_combo()
-	elif _has_buffered(BUFFER_ACTION_HEAVY) or _action_just_pressed("attack_heavy", KEY_X):
+	elif _has_buffered(BUFFER_ACTION_HEAVY) or heavy_edge:
 		if _has_buffered(BUFFER_ACTION_HEAVY):
 			_consume_buffered(BUFFER_ACTION_HEAVY)
 		_start_attack("attack_heavy_01", AttackConfig.CombatState.ATTACK_HEAVY)
@@ -325,7 +331,7 @@ func _handle_active_attack() -> void:
 		return
 	if _has_buffered(BUFFER_ACTION_DODGE) and _can_cancel_into("dodge_roll_fwd"):
 		_consume_buffered(BUFFER_ACTION_DODGE)
-		var iv := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+		var iv := _frame_cmd.move if _frame_cmd else Vector2.ZERO
 		var dodge_dir: Vector3
 		if iv.length() > 0.05:
 			dodge_dir = Vector3(iv.x, 0.0, iv.y)
@@ -508,12 +514,6 @@ func anim_enter_recovery() -> void:
 func anim_attack_end() -> void:
 	if attack_phase == AttackConfig.AttackPhase.RECOVERY:
 		_advance_phase()
-
-# ── Input helpers ─────────────────────────────────────────────────────────────
-func _action_just_pressed(action: String, fallback_key: Key) -> bool:
-	if InputMap.has_action(action):
-		return Input.is_action_just_pressed(action)
-	return Input.is_key_pressed(fallback_key)
 
 # ── Public API ────────────────────────────────────────────────────────────────
 func get_health_percent() -> float:

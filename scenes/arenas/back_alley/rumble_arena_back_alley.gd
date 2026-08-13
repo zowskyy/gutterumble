@@ -10,6 +10,7 @@ signal match_ended(player_won: bool)
 const PLAYER_SCENE := preload("res://scenes/player/fighter.tscn")
 const ENEMY_SCENE  := preload("res://scenes/enemies/mouse_enemy.tscn")
 const PAUSE_SCENE  := preload("res://scenes/ui/pause_menu.tscn")
+const TOUCH_SCENE  := preload("res://scenes/ui/touch_controls.tscn")
 
 const COUNTDOWN_SECS := 3.0
 const ROUND_END_WAIT := 2.5   # seconds before next round or menu
@@ -61,6 +62,9 @@ func _ready() -> void:
 	_pause_menu = PAUSE_SCENE.instantiate()
 	add_child(_pause_menu)
 	_pause_menu.quit_to_menu.connect(func() -> void: GameManager.go_to_main_menu())
+
+	var _touch := TOUCH_SCENE.instantiate()
+	add_child(_touch)
 
 	# Pre-warm pool
 	FighterPool.preload_scene(PLAYER_SCENE.resource_path, self)
